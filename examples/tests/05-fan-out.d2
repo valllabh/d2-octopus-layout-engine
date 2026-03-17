@@ -1,0 +1,24 @@
+# Test 5: Fan out pattern (1 to 3)
+classes: {
+  row-1-col-2: {style.opacity: 1}
+  row-2-col-1: {style.opacity: 1}
+  row-2-col-2: {style.opacity: 1}
+  row-2-col-3: {style.opacity: 1}
+}
+
+lb: Load Balancer {
+  class: row-1-col-2
+}
+s1: Server 1 {
+  class: row-2-col-1
+}
+s2: Server 2 {
+  class: row-2-col-2
+}
+s3: Server 3 {
+  class: row-2-col-3
+}
+
+lb -> s1
+lb -> s2
+lb -> s3

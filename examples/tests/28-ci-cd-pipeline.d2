@@ -1,0 +1,33 @@
+# Test 28: CI/CD Pipeline
+classes: {
+  row-1-col-1: {style.opacity: 1}
+  row-1-col-2: {style.opacity: 1}
+  row-1-col-3: {style.opacity: 1}
+  row-1-col-4: {style.opacity: 1}
+  row-1-col-5: {style.opacity: 1}
+  row-2-col-2: {style.opacity: 1}
+  row-2-col-3: {style.opacity: 1}
+  row-2-col-5: {style.opacity: 1}
+  row-3-col-5: {style.opacity: 1}
+}
+
+commit: Git Push {class: row-1-col-1}
+build: Build {class: row-1-col-2}
+test: Test {class: row-1-col-3}
+stage: Staging {class: row-1-col-4}
+prod: Production {class: row-1-col-5}
+lint: Lint {class: row-2-col-2}
+sec: Security Scan {class: row-2-col-3}
+monitor: Monitoring {class: row-2-col-5}
+rollback: Rollback {class: row-3-col-5}
+
+commit -> build
+build -> lint
+build -> test
+lint -> test
+test -> sec
+sec -> stage
+stage -> prod
+prod -> monitor
+monitor -> rollback: on failure
+rollback -> stage

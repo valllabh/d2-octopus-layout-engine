@@ -1,0 +1,25 @@
+# Test 7: Diamond pattern (1 to 2 to 1)
+classes: {
+  row-1-col-2: {style.opacity: 1}
+  row-2-col-1: {style.opacity: 1}
+  row-2-col-3: {style.opacity: 1}
+  row-3-col-2: {style.opacity: 1}
+}
+
+origin: Begin {
+  class: row-1-col-2
+}
+path-a: Path A {
+  class: row-2-col-1
+}
+path-b: Path B {
+  class: row-2-col-3
+}
+merge: Merge {
+  class: row-3-col-2
+}
+
+origin -> path-a
+origin -> path-b
+path-a -> merge
+path-b -> merge

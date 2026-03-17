@@ -1,0 +1,25 @@
+# Test 18: Binary tree layout
+classes: {
+  row-1-col-4: {style.opacity: 1}
+  row-2-col-2: {style.opacity: 1}
+  row-2-col-6: {style.opacity: 1}
+  row-3-col-1: {style.opacity: 1}
+  row-3-col-3: {style.opacity: 1}
+  row-3-col-5: {style.opacity: 1}
+  row-3-col-7: {style.opacity: 1}
+}
+
+root: Root {class: row-1-col-4}
+l: Left {class: row-2-col-2}
+r: Right {class: row-2-col-6}
+ll: LL {class: row-3-col-1}
+lr: LR {class: row-3-col-3}
+rl: RL {class: row-3-col-5}
+rr: RR {class: row-3-col-7}
+
+root -> l
+root -> r
+l -> ll
+l -> lr
+r -> rl
+r -> rr

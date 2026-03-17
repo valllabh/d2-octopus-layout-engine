@@ -1,0 +1,56 @@
+# Test 32: Edge anchors controlling exact connection points
+classes: {
+  row-1-col-1: {style.opacity: 1}
+  row-1-col-3: {style.opacity: 1}
+  row-2-col-2: {style.opacity: 1}
+  row-3-col-1: {style.opacity: 1}
+  row-3-col-3: {style.opacity: 1}
+  src-anchor-bottom-2: {style.opacity: 1}
+  dst-anchor-top-2: {style.opacity: 1}
+  src-anchor-bottom-4: {style.opacity: 1}
+  dst-anchor-top-4: {style.opacity: 1}
+  src-anchor-right-2: {style.opacity: 1}
+  dst-anchor-left-2: {style.opacity: 1}
+  src-anchor-bottom-center: {style.opacity: 1}
+  dst-anchor-top-center: {style.opacity: 1}
+}
+
+api: API Server {
+  class: row-1-col-1
+  style.fill: "#d0ebff"
+}
+gateway: Gateway {
+  class: row-1-col-3
+  style.fill: "#d0ebff"
+}
+processor: Processor {
+  class: row-2-col-2
+  style.fill: "#fff3bf"
+}
+db: Database {
+  shape: cylinder
+  class: row-3-col-1
+  style.fill: "#d3f9d8"
+}
+cache: Cache {
+  shape: cylinder
+  class: row-3-col-3
+  style.fill: "#ffe8cc"
+}
+
+# Use specific anchor points to spread connections
+api -> processor: route A {
+  class: src-anchor-bottom-2 dst-anchor-top-2
+}
+gateway -> processor: route B {
+  class: src-anchor-bottom-4 dst-anchor-top-4
+}
+processor -> db: write {
+  class: src-anchor-bottom-2 dst-anchor-top-center
+}
+processor -> cache: read {
+  class: src-anchor-bottom-4 dst-anchor-top-center
+}
+api -> gateway: sync {
+  class: src-anchor-right-2 dst-anchor-left-2
+}

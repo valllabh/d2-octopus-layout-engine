@@ -1,0 +1,15 @@
+# Test 19: Mix of explicit and auto placed nodes
+classes: {
+  row-1-col-1: {style.opacity: 1}
+  row-2-col-2: {style.opacity: 1}
+}
+
+explicit1: Pinned A {class: row-1-col-1}
+explicit2: Pinned B {class: row-2-col-2}
+auto1: Auto 1
+auto2: Auto 2
+auto3: Auto 3
+
+explicit1 -> auto1
+explicit2 -> auto2
+auto1 -> auto3

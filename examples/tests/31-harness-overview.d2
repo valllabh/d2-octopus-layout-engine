@@ -1,0 +1,66 @@
+classes: {
+  row-1-col-2: {style.opacity: 1}
+  row-1-col-3: {style.opacity: 1}
+  row-2-col-1: {style.opacity: 1}
+  row-2-col-2: {style.opacity: 1}
+  row-2-col-3: {style.opacity: 1}
+  row-2-col-4: {style.opacity: 1}
+}
+
+knowledge: Knowledge {
+  class: row-1-col-2
+  style.fill: "#fff9db"
+  style.stroke: "#e8c400"
+  style.bold: true
+}
+
+governance: Governance {
+  class: row-1-col-3
+  style.fill: "#ffe3e3"
+  style.stroke: "#c92a2a"
+  style.bold: true
+}
+
+user: "" {
+  shape: person
+  class: row-2-col-1
+  style.fill: "#e9ecef"
+  style.stroke: "#868e96"
+  width: 60
+  height: 80
+}
+
+interface: Interface {
+  class: row-2-col-2
+  style.fill: "#e9ecef"
+  style.stroke: "#868e96"
+  style.bold: true
+}
+
+agency: Agency {
+  class: row-2-col-3
+  style.fill: "#d0ebff"
+  style.stroke: "#1971c2"
+  style.bold: true
+}
+
+model: Model {
+  class: row-2-col-4
+  style.fill: "#a5d8ff"
+  style.stroke: "#1971c2"
+}
+
+# Flow
+user -> interface: ask
+interface -> user: respond
+interface -> agency
+agency -> model
+
+# Governance connects
+governance -> knowledge
+governance -> agency: {style.stroke-dash: 3}
+
+# Agency to Knowledge
+agency -> knowledge: {
+  source-arrowhead.shape: none
+}

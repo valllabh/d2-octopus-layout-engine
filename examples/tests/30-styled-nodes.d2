@@ -1,0 +1,58 @@
+# Test 30: Styled nodes with colors
+classes: {
+  row-1-col-2: {style.opacity: 1}
+  row-2-col-1: {style.opacity: 1}
+  row-2-col-2: {style.opacity: 1}
+  row-2-col-3: {style.opacity: 1}
+  row-3-col-1: {style.opacity: 1}
+  row-3-col-2: {style.opacity: 1}
+  row-3-col-3: {style.opacity: 1}
+  row-4-col-2: {style.opacity: 1}
+}
+
+user: User {
+  shape: person
+  class: row-1-col-2
+  style.fill: "#E0E0E0"
+}
+auth: Auth Service {
+  class: row-2-col-1
+  style.fill: "#FF6B6B"
+  style.font-color: white
+}
+api: API Layer {
+  class: row-2-col-2
+  style.fill: "#4ECDC4"
+}
+cache: Cache {
+  class: row-2-col-3
+  style.fill: "#FFE66D"
+}
+db1: Users DB {
+  shape: cylinder
+  class: row-3-col-1
+  style.fill: "#A8D8EA"
+}
+db2: Orders DB {
+  shape: cylinder
+  class: row-3-col-2
+  style.fill: "#A8D8EA"
+}
+db3: Analytics DB {
+  shape: cylinder
+  class: row-3-col-3
+  style.fill: "#A8D8EA"
+}
+report: Reports {
+  class: row-4-col-2
+  style.fill: "#DDA0DD"
+}
+
+user -> auth: login
+user -> api: requests
+api -> cache: read
+api -> db1
+api -> db2
+api -> db3
+db3 -> report: generate
+auth -> db1: verify

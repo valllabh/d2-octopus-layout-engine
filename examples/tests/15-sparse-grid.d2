@@ -1,0 +1,19 @@
+# Test 15: Sparse grid (nodes at non adjacent positions)
+classes: {
+  row-1-col-1: {style.opacity: 1}
+  row-1-col-5: {style.opacity: 1}
+  row-4-col-1: {style.opacity: 1}
+  row-4-col-5: {style.opacity: 1}
+  row-2-col-3: {style.opacity: 1}
+}
+
+nw: NW Corner {class: row-1-col-1}
+ne: NE Corner {class: row-1-col-5}
+sw: SW Corner {class: row-4-col-1}
+se: SE Corner {class: row-4-col-5}
+mid: Center {class: row-2-col-3}
+
+nw -> mid
+ne -> mid
+mid -> sw
+mid -> se

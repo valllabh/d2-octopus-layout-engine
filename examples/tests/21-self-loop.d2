@@ -1,0 +1,15 @@
+# Test 21: Self referencing node
+classes: {
+  row-1-col-1: {style.opacity: 1}
+  row-1-col-3: {style.opacity: 1}
+  row-2-col-2: {style.opacity: 1}
+}
+
+scheduler: Scheduler {class: row-1-col-1}
+worker: Worker {class: row-1-col-3}
+queue: Queue {class: row-2-col-2}
+
+scheduler -> queue: enqueue
+queue -> worker: dequeue
+worker -> queue: retry
+scheduler -> scheduler: heartbeat

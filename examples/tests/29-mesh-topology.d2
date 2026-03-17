@@ -1,0 +1,32 @@
+# Test 29: Service mesh (every node connects to neighbors)
+classes: {
+  row-1-col-1: {style.opacity: 1}
+  row-1-col-2: {style.opacity: 1}
+  row-1-col-3: {style.opacity: 1}
+  row-2-col-1: {style.opacity: 1}
+  row-2-col-2: {style.opacity: 1}
+  row-2-col-3: {style.opacity: 1}
+  row-3-col-1: {style.opacity: 1}
+  row-3-col-2: {style.opacity: 1}
+  row-3-col-3: {style.opacity: 1}
+}
+
+a: Svc A {class: row-1-col-1}
+b: Svc B {class: row-1-col-2}
+c: Svc C {class: row-1-col-3}
+d: Svc D {class: row-2-col-1}
+e: Svc E {class: row-2-col-2}
+f: Svc F {class: row-2-col-3}
+g: Svc G {class: row-3-col-1}
+h: Svc H {class: row-3-col-2}
+i: Svc I {class: row-3-col-3}
+
+# Horizontal
+a -> b -> c
+d -> e -> f
+g -> h -> i
+
+# Vertical
+a -> d -> g
+b -> e -> h
+c -> f -> i

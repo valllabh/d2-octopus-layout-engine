@@ -1,0 +1,21 @@
+# Test 22: Data pipeline (horizontal flow)
+classes: {
+  row-1-col-1: {style.opacity: 1}
+  row-1-col-2: {style.opacity: 1}
+  row-1-col-3: {style.opacity: 1}
+  row-1-col-4: {style.opacity: 1}
+  row-2-col-2: {style.opacity: 1}
+  row-2-col-3: {style.opacity: 1}
+}
+
+ingest: Ingest {class: row-1-col-1}
+transform: Transform {class: row-1-col-2}
+enrich: Enrich {class: row-1-col-3}
+load: Load {class: row-1-col-4}
+errors: Error Queue {class: row-2-col-2}
+dlq: Dead Letter {class: row-2-col-3}
+
+ingest -> transform -> enrich -> load
+transform -> errors: failures
+enrich -> errors: failures
+errors -> dlq: unrecoverable

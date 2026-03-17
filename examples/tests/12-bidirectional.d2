@@ -1,0 +1,16 @@
+# Test 12: Bidirectional connections
+classes: {
+  row-1-col-1: {style.opacity: 1}
+  row-1-col-3: {style.opacity: 1}
+  row-2-col-2: {style.opacity: 1}
+}
+
+client: Client {class: row-1-col-1}
+server: Server {class: row-1-col-3}
+cache: Cache {class: row-2-col-2}
+
+client -> server: request
+server -> client: response
+client -> cache: read
+cache -> client: hit
+server -> cache: write

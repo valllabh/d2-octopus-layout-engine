@@ -1,0 +1,17 @@
+# Test 25: Cross connections (edges crossing each other)
+classes: {
+  row-1-col-1: {style.opacity: 1}
+  row-1-col-3: {style.opacity: 1}
+  row-3-col-1: {style.opacity: 1}
+  row-3-col-3: {style.opacity: 1}
+}
+
+a: A {class: row-1-col-1}
+b: B {class: row-1-col-3}
+c: C {class: row-3-col-1}
+d: D {class: row-3-col-3}
+
+a -> d: crosses
+b -> c: crosses
+a -> c
+b -> d

@@ -1,0 +1,51 @@
+# Test 27: Large 5x5 grid with selective connections
+classes: {
+  row-1-col-1: {style.opacity: 1}
+  row-1-col-2: {style.opacity: 1}
+  row-1-col-3: {style.opacity: 1}
+  row-1-col-4: {style.opacity: 1}
+  row-1-col-5: {style.opacity: 1}
+  row-2-col-1: {style.opacity: 1}
+  row-2-col-5: {style.opacity: 1}
+  row-3-col-1: {style.opacity: 1}
+  row-3-col-3: {style.opacity: 1}
+  row-3-col-5: {style.opacity: 1}
+  row-4-col-1: {style.opacity: 1}
+  row-4-col-5: {style.opacity: 1}
+  row-5-col-1: {style.opacity: 1}
+  row-5-col-2: {style.opacity: 1}
+  row-5-col-3: {style.opacity: 1}
+  row-5-col-4: {style.opacity: 1}
+  row-5-col-5: {style.opacity: 1}
+}
+
+# Border nodes forming a ring
+n1: N1 {class: row-1-col-1}
+n2: N2 {class: row-1-col-2}
+n3: N3 {class: row-1-col-3}
+n4: N4 {class: row-1-col-4}
+n5: N5 {class: row-1-col-5}
+w1: W1 {class: row-2-col-1}
+e1: E1 {class: row-2-col-5}
+w2: W2 {class: row-3-col-1}
+center: HUB {class: row-3-col-3}
+e2: E2 {class: row-3-col-5}
+w3: W3 {class: row-4-col-1}
+e3: E3 {class: row-4-col-5}
+s1: S1 {class: row-5-col-1}
+s2: S2 {class: row-5-col-2}
+s3: S3 {class: row-5-col-3}
+s4: S4 {class: row-5-col-4}
+s5: S5 {class: row-5-col-5}
+
+# Ring connections
+n1 -> n2 -> n3 -> n4 -> n5
+n5 -> e1 -> e2 -> e3 -> s5
+s5 -> s4 -> s3 -> s2 -> s1
+s1 -> w3 -> w2 -> w1 -> n1
+
+# Spokes to center
+n3 -> center
+w2 -> center
+e2 -> center
+s3 -> center

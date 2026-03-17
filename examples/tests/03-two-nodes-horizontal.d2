@@ -1,0 +1,14 @@
+# Test 3: Two nodes side by side
+classes: {
+  row-1-col-1: {style.opacity: 1}
+  row-1-col-2: {style.opacity: 1}
+}
+
+a: Service A {
+  class: row-1-col-1
+}
+b: Service B {
+  class: row-1-col-2
+}
+
+a -> b

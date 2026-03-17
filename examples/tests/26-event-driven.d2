@@ -1,0 +1,30 @@
+# Test 26: Event driven architecture
+classes: {
+  row-1-col-1: {style.opacity: 1}
+  row-1-col-3: {style.opacity: 1}
+  row-2-col-2: {style.opacity: 1}
+  row-3-col-1: {style.opacity: 1}
+  row-3-col-2: {style.opacity: 1}
+  row-3-col-3: {style.opacity: 1}
+  row-4-col-2: {style.opacity: 1}
+}
+
+web-app: Web App {class: row-1-col-1}
+mobile-app: Mobile App {class: row-1-col-3}
+event-bus: Event Bus {class: row-2-col-2}
+handler1: Order Handler {class: row-3-col-1}
+handler2: Payment Handler {class: row-3-col-2}
+handler3: Notification Handler {class: row-3-col-3}
+audit: Audit Log {
+  shape: cylinder
+  class: row-4-col-2
+}
+
+web-app -> event-bus: publish
+mobile-app -> event-bus: publish
+event-bus -> handler1: OrderCreated
+event-bus -> handler2: PaymentRequested
+event-bus -> handler3: NotifyUser
+handler1 -> audit
+handler2 -> audit
+handler3 -> audit

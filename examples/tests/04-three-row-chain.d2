@@ -1,0 +1,19 @@
+# Test 4: Three node vertical chain
+classes: {
+  row-1-col-1: {style.opacity: 1}
+  row-2-col-1: {style.opacity: 1}
+  row-3-col-1: {style.opacity: 1}
+}
+
+client: Client {
+  class: row-1-col-1
+}
+api: API Gateway {
+  class: row-2-col-1
+}
+db: Database {
+  class: row-3-col-1
+  shape: cylinder
+}
+
+client -> api -> db

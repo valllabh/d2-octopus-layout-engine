@@ -1,0 +1,47 @@
+# Test 16: Microservices architecture
+classes: {
+  row-1-col-2: {style.opacity: 1}
+  row-2-col-2: {style.opacity: 1}
+  row-3-col-1: {style.opacity: 1}
+  row-3-col-2: {style.opacity: 1}
+  row-3-col-3: {style.opacity: 1}
+  row-4-col-1: {style.opacity: 1}
+  row-4-col-2: {style.opacity: 1}
+  row-4-col-3: {style.opacity: 1}
+}
+
+client: Mobile App {
+  class: row-1-col-2
+}
+gateway: API Gateway {
+  class: row-2-col-2
+}
+auth: Auth Service {
+  class: row-3-col-1
+}
+users: User Service {
+  class: row-3-col-2
+}
+orders: Order Service {
+  class: row-3-col-3
+}
+auth-db: Auth DB {
+  shape: cylinder
+  class: row-4-col-1
+}
+user-db: User DB {
+  shape: cylinder
+  class: row-4-col-2
+}
+order-db: Order DB {
+  shape: cylinder
+  class: row-4-col-3
+}
+
+client -> gateway
+gateway -> auth
+gateway -> users
+gateway -> orders
+auth -> auth-db
+users -> user-db
+orders -> order-db

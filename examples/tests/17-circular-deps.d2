@@ -1,0 +1,17 @@
+# Test 17: Circular dependency pattern
+classes: {
+  row-1-col-2: {style.opacity: 1}
+  row-2-col-1: {style.opacity: 1}
+  row-2-col-3: {style.opacity: 1}
+  row-3-col-2: {style.opacity: 1}
+}
+
+a: Service A {class: row-1-col-2}
+b: Service B {class: row-2-col-1}
+c: Service C {class: row-2-col-3}
+d: Service D {class: row-3-col-2}
+
+a -> b
+b -> d
+d -> c
+c -> a

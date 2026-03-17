@@ -1,0 +1,12 @@
+bin/
+*.exe
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+.DS_Store
+examples/tests/output/
+examples/tests/png/
+examples/tests/baseline/
+examples/ai-orchestrator.svg

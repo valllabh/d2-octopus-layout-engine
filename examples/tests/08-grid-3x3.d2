@@ -1,0 +1,31 @@
+# Test 8: Full 3x3 grid
+classes: {
+  row-1-col-1: {style.opacity: 1}
+  row-1-col-2: {style.opacity: 1}
+  row-1-col-3: {style.opacity: 1}
+  row-2-col-1: {style.opacity: 1}
+  row-2-col-2: {style.opacity: 1}
+  row-2-col-3: {style.opacity: 1}
+  row-3-col-1: {style.opacity: 1}
+  row-3-col-2: {style.opacity: 1}
+  row-3-col-3: {style.opacity: 1}
+}
+
+a: A {class: row-1-col-1}
+b: B {class: row-1-col-2}
+c: C {class: row-1-col-3}
+d: D {class: row-2-col-1}
+e: E {class: row-2-col-2}
+f: F {class: row-2-col-3}
+g: G {class: row-3-col-1}
+h: H {class: row-3-col-2}
+i: I {class: row-3-col-3}
+
+a -> e
+b -> e
+c -> e
+e -> g
+e -> h
+e -> i
+d -> e
+f -> e

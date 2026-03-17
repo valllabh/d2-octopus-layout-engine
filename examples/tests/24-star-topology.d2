@@ -1,0 +1,19 @@
+# Test 24: Star topology (central hub)
+classes: {
+  row-1-col-2: {style.opacity: 1}
+  row-2-col-1: {style.opacity: 1}
+  row-2-col-3: {style.opacity: 1}
+  row-3-col-2: {style.opacity: 1}
+  row-2-col-2: {style.opacity: 1}
+}
+
+hub: Message Bus {class: row-2-col-2}
+n: Producer {class: row-1-col-2}
+w: Analytics {class: row-2-col-1}
+e: Storage {class: row-2-col-3}
+s: Consumer {class: row-3-col-2}
+
+n -> hub
+hub -> w
+hub -> e
+hub -> s

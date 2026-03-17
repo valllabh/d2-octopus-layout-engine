@@ -1,0 +1,24 @@
+# Test 6: Fan in pattern (3 to 1)
+classes: {
+  row-1-col-1: {style.opacity: 1}
+  row-1-col-2: {style.opacity: 1}
+  row-1-col-3: {style.opacity: 1}
+  row-2-col-2: {style.opacity: 1}
+}
+
+src1: Source A {
+  class: row-1-col-1
+}
+src2: Source B {
+  class: row-1-col-2
+}
+src3: Source C {
+  class: row-1-col-3
+}
+agg: Aggregator {
+  class: row-2-col-2
+}
+
+src1 -> agg
+src2 -> agg
+src3 -> agg
