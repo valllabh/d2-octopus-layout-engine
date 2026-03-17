@@ -736,6 +736,118 @@ func routeEdgeWithAnchors(edge *d2graph.Edge, srcBox, dstBox *geo.Box, anchors g
 
 	// Post process: if route crosses any obstacle, reroute with a clean U shape
 	edge.Route = rerouteAroundObstacles(edge.Route, srcBox, dstBox, allObjects)
+
+	// Enforce perpendicular contact at both anchors.
+	// After rerouting, the first/last segments may no longer be perpendicular.
+	edge.Route = enforcePerpendicularAnchors(edge.Route, anchors.SrcAnchor, anchors.DstAnchor)
+}
+
+// enforcePerpendicularAnchors ensures the first and last segments of a route
+// are perpendicular to the shape edge at the anchor point.
+// If the first segment is not perpendicular, a short stub is inserted.
+func enforcePerpendicularAnchors(route []*geo.Point, srcAnchor, dstAnchor grid.Anchor) []*geo.Point {
+	if len(route) < 2 {
+		return route
+	}
+
+	stubLen := 20.0
+
+	// Check source: first segment must be perpendicular to source edge
+	p0, p1 := route[0], route[1]
+	srcVert := isVerticalAnchor(srcAnchor)
+	firstIsVert := math.Abs(p0.X-p1.X) < 1
+	firstIsHoriz := math.Abs(p0.Y-p1.Y) < 1
+
+	if srcVert && !firstIsVert && !firstIsHoriz {
+		// Anchor on top/bottom but first segment is diagonal. Insert vertical stub.
+		stubY := p0.Y - stubLen
+		if isBottomAnchor(srcAnchor) {
+			stubY = p0.Y + stubLen
+		}
+		stub := geo.NewPoint(p0.X, stubY)
+		route = append([]*geo.Point{p0, stub}, route[1:]...)
+	} else if !srcVert && !firstIsHoriz && !firstIsVert {
+		// Anchor on left/right but first segment is diagonal. Insert horizontal stub.
+		stubX := p0.X - stubLen
+		if isRightAnchor(srcAnchor) {
+			stubX = p0.X + stubLen
+		}
+		stub := geo.NewPoint(stubX, p0.Y)
+		route = append([]*geo.Point{p0, stub}, route[1:]...)
+	} else if srcVert && firstIsHoriz {
+		// Anchor on top/bottom but first segment goes horizontal. Insert vertical stub.
+		stubY := p0.Y - stubLen
+		if isBottomAnchor(srcAnchor) {
+			stubY = p0.Y + stubLen
+		}
+		stub := geo.NewPoint(p0.X, stubY)
+		route = append([]*geo.Point{p0, stub}, route[1:]...)
+	} else if !srcVert && firstIsVert {
+		// Anchor on left/right but first segment goes vertical. Insert horizontal stub.
+		stubX := p0.X - stubLen
+		if isRightAnchor(srcAnchor) {
+			stubX = p0.X + stubLen
+		}
+		stub := geo.NewPoint(stubX, p0.Y)
+		route = append([]*geo.Point{p0, stub}, route[1:]...)
+	}
+
+	// Check destination: last segment must be perpendicular to dest edge
+	pN := route[len(route)-1]
+	pN1 := route[len(route)-2]
+	dstVert := isVerticalAnchor(dstAnchor)
+	lastIsVert := math.Abs(pN.X-pN1.X) < 1
+	lastIsHoriz := math.Abs(pN.Y-pN1.Y) < 1
+
+	if dstVert && !lastIsVert && !lastIsHoriz {
+		stubY := pN.Y + stubLen
+		if isBottomAnchor(dstAnchor) {
+			stubY = pN.Y - stubLen
+		}
+		stub := geo.NewPoint(pN.X, stubY)
+		route = append(route[:len(route)-1], stub, pN)
+	} else if !dstVert && !lastIsHoriz && !lastIsVert {
+		stubX := pN.X + stubLen
+		if isRightAnchor(dstAnchor) {
+			stubX = pN.X - stubLen
+		}
+		stub := geo.NewPoint(stubX, pN.Y)
+		route = append(route[:len(route)-1], stub, pN)
+	} else if dstVert && lastIsHoriz {
+		stubY := pN.Y + stubLen
+		if isBottomAnchor(dstAnchor) {
+			stubY = pN.Y - stubLen
+		}
+		stub := geo.NewPoint(pN.X, stubY)
+		route = append(route[:len(route)-1], stub, pN)
+	} else if !dstVert && lastIsVert {
+		stubX := pN.X + stubLen
+		if isRightAnchor(dstAnchor) {
+			stubX = pN.X - stubLen
+		}
+		stub := geo.NewPoint(stubX, pN.Y)
+		route = append(route[:len(route)-1], stub, pN)
+	}
+
+	return route
+}
+
+func isBottomAnchor(a grid.Anchor) bool {
+	switch a {
+	case grid.AnchorBottomLeft, grid.AnchorBottomCenter, grid.AnchorBottomRight,
+		grid.AnchorBottom1, grid.AnchorBottom2, grid.AnchorBottom3, grid.AnchorBottom4, grid.AnchorBottom5:
+		return true
+	}
+	return false
+}
+
+func isRightAnchor(a grid.Anchor) bool {
+	switch a {
+	case grid.AnchorTopRight, grid.AnchorBottomRight, grid.AnchorRightCenter,
+		grid.AnchorRight1, grid.AnchorRight2, grid.AnchorRight3, grid.AnchorRight4, grid.AnchorRight5:
+		return true
+	}
+	return false
 }
 
 // rerouteAroundObstacles checks if any route segment crosses an obstacle.

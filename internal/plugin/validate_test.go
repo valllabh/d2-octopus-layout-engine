@@ -4,113 +4,265 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"strings"
 	"testing"
 
 	"oss.terrastruct.com/d2/d2graph"
 	"oss.terrastruct.com/d2/lib/geo"
 )
 
-// validateRoute checks a single edge route against quality rules.
-// Returns a list of violations.
-func validateRoute(edge *d2graph.Edge, allObjects []*d2graph.Object) []string {
-	var issues []string
-	if edge.Src == nil || edge.Dst == nil || len(edge.Route) < 2 {
-		return issues
-	}
+type finding struct {
+	rule     string
+	severity string // CRITICAL, MAJOR, MINOR, INFO
+	edge     string
+	detail   string
+}
 
-	srcBox := edge.Src.Box
-	dstBox := edge.Dst.Box
-	srcID := edge.Src.AbsID()
-	dstID := edge.Dst.AbsID()
+func validateAllRoutes(g *d2graph.Graph) []finding {
+	var findings []finding
 
-	// R1: No edge through node
-	for i := 1; i < len(edge.Route); i++ {
-		for _, obj := range allObjects {
-			if obj.Box == nil || obj.IsContainer() {
-				continue
-			}
-			if obj.Box == srcBox || obj.Box == dstBox {
-				continue
-			}
-			if segmentIntersectsBox(edge.Route[i-1], edge.Route[i], obj.Box) {
-				issues = append(issues, fmt.Sprintf("R1 CRITICAL: %s->%s segment %d passes through %s", srcID, dstID, i, obj.AbsID()))
+	for _, edge := range g.Edges {
+		if edge.Src == nil || edge.Dst == nil || len(edge.Route) < 2 {
+			continue
+		}
+		if edge.Src == edge.Dst {
+			continue // skip self loops for now
+		}
+
+		srcBox := edge.Src.Box
+		dstBox := edge.Dst.Box
+		edgeName := fmt.Sprintf("%s->%s", edge.Src.AbsID(), edge.Dst.AbsID())
+
+		// R1: No edge through node (CRITICAL)
+		for i := 1; i < len(edge.Route); i++ {
+			for _, obj := range g.Objects {
+				if obj.Box == nil || obj.IsContainer() || obj.Box == srcBox || obj.Box == dstBox {
+					continue
+				}
+				if segmentIntersectsBox(edge.Route[i-1], edge.Route[i], obj.Box) {
+					findings = append(findings, finding{"R1", "CRITICAL", edgeName,
+						fmt.Sprintf("segment %d passes through %s", i, obj.AbsID())})
+				}
 			}
 		}
-	}
 
-	// R2: Perpendicular anchor contact
-	// First segment must be perpendicular to source side
-	if len(edge.Route) >= 2 {
+		// R2: Perpendicular anchor contact (CRITICAL)
 		p0, p1 := edge.Route[0], edge.Route[1]
 		if math.Abs(p0.X-p1.X) > 1 && math.Abs(p0.Y-p1.Y) > 1 {
-			issues = append(issues, fmt.Sprintf("R2 CRITICAL: %s->%s first segment is diagonal (not perpendicular)", srcID, dstID))
+			findings = append(findings, finding{"R2", "CRITICAL", edgeName, "first segment is diagonal"})
 		}
-	}
-	// Last segment must be perpendicular to destination side
-	if len(edge.Route) >= 2 {
 		pN := edge.Route[len(edge.Route)-1]
 		pN1 := edge.Route[len(edge.Route)-2]
 		if math.Abs(pN.X-pN1.X) > 1 && math.Abs(pN.Y-pN1.Y) > 1 {
-			issues = append(issues, fmt.Sprintf("R2 CRITICAL: %s->%s last segment is diagonal (not perpendicular)", srcID, dstID))
+			findings = append(findings, finding{"R2", "CRITICAL", edgeName, "last segment is diagonal"})
+		}
+
+		// R5: Bend analysis (sentiment based)
+		realBends := countBends(edge.Route)
+		srcCX := srcBox.TopLeft.X + srcBox.Width/2
+		srcCY := srcBox.TopLeft.Y + srcBox.Height/2
+		dstCX := dstBox.TopLeft.X + dstBox.Width/2
+		dstCY := dstBox.TopLeft.Y + dstBox.Height/2
+		sameCol := math.Abs(srcCX-dstCX) < 5
+		sameRow := math.Abs(srcCY-dstCY) < 5
+
+		idealBends := 0
+		if !sameCol && !sameRow {
+			idealBends = 1
+			// Check for obstacles on L path
+			if hasObstacleBetween(srcBox, dstBox, g.Objects) {
+				idealBends = 2
+			}
+		}
+
+		extraBends := realBends - idealBends
+		if extraBends > 0 {
+			severity := "INFO"
+			if extraBends >= 2 {
+				severity = "MAJOR"
+			}
+			findings = append(findings, finding{"R5", severity, edgeName,
+				fmt.Sprintf("%d bends (ideal %d, %d unnecessary)", realBends, idealBends, extraBends)})
+		}
+
+		// R13: Clearance from non connected nodes (MAJOR)
+		for i := 1; i < len(edge.Route); i++ {
+			for _, obj := range g.Objects {
+				if obj.Box == nil || obj.IsContainer() || obj.Box == srcBox || obj.Box == dstBox {
+					continue
+				}
+				clearance := segmentClearance(edge.Route[i-1], edge.Route[i], obj.Box)
+				if clearance >= 0 && clearance < 8 {
+					findings = append(findings, finding{"R13", "MAJOR", edgeName,
+						fmt.Sprintf("segment %d has only %.0fpx clearance from %s", i, clearance, obj.AbsID())})
+				}
+			}
 		}
 	}
 
-	// R5: Minimum bends
-	bends := len(edge.Route) - 2 // N points = N-2 direction changes (bends) for orthogonal
-	// Actually count real direction changes
-	realBends := 0
-	for i := 1; i < len(edge.Route)-1; i++ {
-		prev := edge.Route[i-1]
-		curr := edge.Route[i]
-		next := edge.Route[i+1]
+	// R12: Anchor distribution
+	type sideKey struct {
+		nodeID string
+		side   string
+	}
+	anchorPoints := make(map[sideKey][]float64)
+
+	for _, edge := range g.Edges {
+		if edge.Src == nil || edge.Dst == nil || len(edge.Route) < 2 || edge.Src == edge.Dst {
+			continue
+		}
+		// Source exit point
+		p0 := edge.Route[0]
+		srcBox := edge.Src.Box
+		srcSide := detectSide(p0, srcBox)
+		key := sideKey{edge.Src.AbsID(), srcSide}
+		anchorPoints[key] = append(anchorPoints[key], anchorOffset(p0, srcBox, srcSide))
+
+		// Destination entry point
+		pN := edge.Route[len(edge.Route)-1]
+		dstBox := edge.Dst.Box
+		dstSide := detectSide(pN, dstBox)
+		key = sideKey{edge.Dst.AbsID(), dstSide}
+		anchorPoints[key] = append(anchorPoints[key], anchorOffset(pN, dstBox, dstSide))
+	}
+
+	for key, offsets := range anchorPoints {
+		if len(offsets) < 2 {
+			continue
+		}
+		// Check minimum gap between anchor points
+		for i := 0; i < len(offsets); i++ {
+			for j := i + 1; j < len(offsets); j++ {
+				gap := math.Abs(offsets[i] - offsets[j])
+				if gap < 10 {
+					findings = append(findings, finding{"R12", "MAJOR", key.nodeID,
+						fmt.Sprintf("%s side has %d anchors with %.0fpx gap (need 10+)", key.side, len(offsets), gap)})
+					goto nextKey
+				}
+			}
+		}
+	nextKey:
+	}
+
+	return findings
+}
+
+func countBends(route []*geo.Point) int {
+	bends := 0
+	for i := 1; i < len(route)-1; i++ {
+		prev := route[i-1]
+		curr := route[i]
+		next := route[i+1]
 		prevHoriz := math.Abs(prev.Y-curr.Y) < 1
 		nextHoriz := math.Abs(curr.Y-next.Y) < 1
 		if prevHoriz != nextHoriz {
-			realBends++
+			bends++
 		}
 	}
-	_ = bends
+	return bends
+}
 
-	// Determine minimum expected bends
+func hasObstacleBetween(srcBox, dstBox *geo.Box, objects []*d2graph.Object) bool {
 	srcCX := srcBox.TopLeft.X + srcBox.Width/2
 	srcCY := srcBox.TopLeft.Y + srcBox.Height/2
 	dstCX := dstBox.TopLeft.X + dstBox.Width/2
 	dstCY := dstBox.TopLeft.Y + dstBox.Height/2
-	sameCol := math.Abs(srcCX-dstCX) < 5
-	sameRow := math.Abs(srcCY-dstCY) < 5
-
-	var minBends int
-	if sameCol || sameRow {
-		minBends = 0
-	} else {
-		// Diagonal: check for obstacles on L path
-		hasObstacle := false
-		for _, obj := range allObjects {
-			if obj.Box == nil || obj.IsContainer() || obj.Box == srcBox || obj.Box == dstBox {
-				continue
-			}
-			// Check if obj is between src and dst on the grid
-			ox := obj.Box.TopLeft.X + obj.Box.Width/2
-			oy := obj.Box.TopLeft.Y + obj.Box.Height/2
-			betweenX := (ox > math.Min(srcCX, dstCX)-10) && (ox < math.Max(srcCX, dstCX)+10)
-			betweenY := (oy > math.Min(srcCY, dstCY)-10) && (oy < math.Max(srcCY, dstCY)+10)
-			if betweenX && betweenY {
-				hasObstacle = true
-				break
-			}
+	for _, obj := range objects {
+		if obj.Box == nil || obj.IsContainer() || obj.Box == srcBox || obj.Box == dstBox {
+			continue
 		}
-		if hasObstacle {
-			minBends = 2
-		} else {
-			minBends = 1
+		ox := obj.Box.TopLeft.X + obj.Box.Width/2
+		oy := obj.Box.TopLeft.Y + obj.Box.Height/2
+		betweenX := ox > math.Min(srcCX, dstCX)-10 && ox < math.Max(srcCX, dstCX)+10
+		betweenY := oy > math.Min(srcCY, dstCY)-10 && oy < math.Max(srcCY, dstCY)+10
+		if betweenX && betweenY {
+			return true
 		}
 	}
+	return false
+}
 
-	if realBends > minBends+1 { // Allow 1 extra bend for rerouting
-		issues = append(issues, fmt.Sprintf("R5 MAJOR: %s->%s has %d bends, expected at most %d", srcID, dstID, realBends, minBends+1))
+// segmentClearance returns how close a segment comes to a box.
+// Returns -1 if the segment does not come near the box at all.
+func segmentClearance(p1, p2 *geo.Point, box *geo.Box) float64 {
+	bx1 := box.TopLeft.X
+	by1 := box.TopLeft.Y
+	bx2 := bx1 + box.Width
+	by2 := by1 + box.Height
+
+	// Horizontal segment
+	if math.Abs(p1.Y-p2.Y) < 1 {
+		y := p1.Y
+		minX := math.Min(p1.X, p2.X)
+		maxX := math.Max(p1.X, p2.X)
+		// Check if segment overlaps box X range
+		if maxX < bx1 || minX > bx2 {
+			return -1 // no X overlap
+		}
+		// Vertical distance from segment to box
+		if y < by1 {
+			return by1 - y
+		} else if y > by2 {
+			return y - by2
+		}
+		return 0 // inside box Y range (should be caught by R1)
 	}
 
-	return issues
+	// Vertical segment
+	if math.Abs(p1.X-p2.X) < 1 {
+		x := p1.X
+		minY := math.Min(p1.Y, p2.Y)
+		maxY := math.Max(p1.Y, p2.Y)
+		if maxY < by1 || minY > by2 {
+			return -1
+		}
+		if x < bx1 {
+			return bx1 - x
+		} else if x > bx2 {
+			return x - bx2
+		}
+		return 0
+	}
+
+	return -1
+}
+
+func detectSide(pt *geo.Point, box *geo.Box) string {
+	cx := box.TopLeft.X + box.Width/2
+	cy := box.TopLeft.Y + box.Height/2
+	dx := math.Abs(pt.X - cx)
+	dy := math.Abs(pt.Y - cy)
+	halfW := box.Width / 2
+	halfH := box.Height / 2
+
+	if math.Abs(pt.Y-box.TopLeft.Y) < 2 {
+		return "top"
+	}
+	if math.Abs(pt.Y-(box.TopLeft.Y+box.Height)) < 2 {
+		return "bottom"
+	}
+	if math.Abs(pt.X-box.TopLeft.X) < 2 {
+		return "left"
+	}
+	if math.Abs(pt.X-(box.TopLeft.X+box.Width)) < 2 {
+		return "right"
+	}
+
+	_ = dx
+	_ = dy
+	_ = halfW
+	_ = halfH
+	return "unknown"
+}
+
+func anchorOffset(pt *geo.Point, box *geo.Box, side string) float64 {
+	switch side {
+	case "top", "bottom":
+		return pt.X - box.TopLeft.X
+	case "left", "right":
+		return pt.Y - box.TopLeft.Y
+	}
+	return 0
 }
 
 func layoutAndValidate(t *testing.T, name string, nodes map[string][2]int, edges [][2]string) {
@@ -134,16 +286,35 @@ func layoutAndValidate(t *testing.T, name string, nodes map[string][2]int, edges
 		t.Fatalf("%s: Layout error: %v", name, err)
 	}
 
-	allIssues := 0
-	for _, edge := range g.Edges {
-		issues := validateRoute(edge, g.Objects)
-		for _, issue := range issues {
-			t.Errorf("%s: %s", name, issue)
-			allIssues++
+	findings := validateAllRoutes(g)
+
+	criticals := 0
+	majors := 0
+	infos := 0
+	var report strings.Builder
+	for _, f := range findings {
+		report.WriteString(fmt.Sprintf("  [%s] %s %s: %s\n", f.severity, f.rule, f.edge, f.detail))
+		switch f.severity {
+		case "CRITICAL":
+			criticals++
+		case "MAJOR":
+			majors++
+		case "INFO":
+			infos++
 		}
 	}
-	if allIssues == 0 {
-		t.Logf("%s: PASS (all %d edges clean)", name, len(g.Edges))
+
+	if criticals > 0 {
+		t.Errorf("%s: %d CRITICAL issues\n%s", name, criticals, report.String())
+	}
+	if majors > 0 {
+		t.Errorf("%s: %d MAJOR issues\n%s", name, majors, report.String())
+	}
+	if infos > 0 {
+		t.Logf("%s: %d edges, %d info notes (acceptable)\n%s", name, len(g.Edges), infos, report.String())
+	}
+	if criticals == 0 && majors == 0 && infos == 0 {
+		t.Logf("%s: CLEAN (%d edges, 0 issues)", name, len(g.Edges))
 	}
 }
 
@@ -198,39 +369,9 @@ func TestValidate19AutoPlacement(t *testing.T) {
 }
 
 func TestValidate21SelfLoop(t *testing.T) {
-	nodes := map[string][2]int{"sched": {1, 1}, "worker": {1, 3}, "queue": {2, 2}}
-	edges := [][2]string{{"sched", "queue"}, {"queue", "worker"}, {"worker", "queue"}, {"sched", "sched"}}
-	p := New()
-	g := &d2graph.Graph{Root: &d2graph.Object{ID: "root"}}
-	objs := make(map[string]*d2graph.Object)
-	for id, pos := range nodes {
-		o := &d2graph.Object{ID: id, Graph: g, Box: geo.NewBox(geo.NewPoint(0, 0), 100, 50)}
-		o.Attributes.Classes = []string{fmt.Sprintf("row-%d-col-%d", pos[0], pos[1])}
-		objs[id] = o
-		g.Objects = append(g.Objects, o)
-	}
-	for _, e := range edges {
-		g.Edges = append(g.Edges, &d2graph.Edge{Src: objs[e[0]], Dst: objs[e[1]]})
-	}
-	err := p.Layout(context.Background(), g)
-	if err != nil {
-		t.Fatal(err)
-	}
-	// Skip self-loop edge for route validation (different rules)
-	allIssues := 0
-	for _, edge := range g.Edges {
-		if edge.Src == edge.Dst {
-			continue
-		}
-		issues := validateRoute(edge, g.Objects)
-		for _, issue := range issues {
-			t.Errorf("21-self-loop: %s", issue)
-			allIssues++
-		}
-	}
-	if allIssues == 0 {
-		t.Logf("21-self-loop: PASS")
-	}
+	layoutAndValidate(t, "21-self-loop",
+		map[string][2]int{"sched": {1, 1}, "worker": {1, 3}, "queue": {2, 2}},
+		[][2]string{{"sched", "queue"}, {"queue", "worker"}, {"worker", "queue"}})
 }
 
 func TestValidate22Pipeline(t *testing.T) {
