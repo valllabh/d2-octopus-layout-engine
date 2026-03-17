@@ -41,16 +41,21 @@ cache: Cache {
 # Use specific anchor points to spread connections
 api -> processor: route A {
   class: src-anchor-bottom-2 dst-anchor-top-2
+  style.stroke: "#E74C3C"
 }
 gateway -> processor: route B {
   class: src-anchor-bottom-4 dst-anchor-top-4
+  style.stroke: "#3498DB"
 }
 processor -> db: write {
   class: src-anchor-bottom-2 dst-anchor-top-center
+  style.stroke: "#2ECC71"
 }
 processor -> cache: read {
   class: src-anchor-bottom-4 dst-anchor-top-center
+  style.stroke: "#F39C12"
 }
 api -> gateway: sync {
   class: src-anchor-right-2 dst-anchor-left-2
+  style.stroke: "#9B59B6"
 }

@@ -9,8 +9,8 @@ client: Client {class: row-1-col-1}
 server: Server {class: row-1-col-3}
 cache: Cache {class: row-2-col-2}
 
-client -> server: request
-server -> client: response
-client -> cache: read
-cache -> client: hit
-server -> cache: write
+client -> server: request {style.stroke: "#E74C3C"}
+server -> client: response {style.stroke: "#3498DB"}
+client -> cache: read {style.stroke: "#2ECC71"}
+cache -> client: hit {style.stroke: "#F39C12"}
+server -> cache: write {style.stroke: "#9B59B6"}

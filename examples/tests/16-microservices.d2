@@ -38,10 +38,10 @@ order-db: Order DB {
   class: row-4-col-3
 }
 
-client -> gateway
-gateway -> auth
-gateway -> users
-gateway -> orders
-auth -> auth-db
-users -> user-db
-orders -> order-db
+client -> gateway: {style.stroke: "#E74C3C"}
+gateway -> auth: {style.stroke: "#3498DB"}
+gateway -> users: {style.stroke: "#2ECC71"}
+gateway -> orders: {style.stroke: "#F39C12"}
+auth -> auth-db: {style.stroke: "#9B59B6"}
+users -> user-db: {style.stroke: "#1ABC9C"}
+orders -> order-db: {style.stroke: "#E67E22"}

@@ -15,7 +15,7 @@ load: Load {class: row-1-col-4}
 errors: Error Queue {class: row-2-col-2}
 dlq: Dead Letter {class: row-2-col-3}
 
-ingest -> transform -> enrich -> load
-transform -> errors: failures
-enrich -> errors: failures
-errors -> dlq: unrecoverable
+ingest -> transform -> enrich -> load: {style.stroke: "#E74C3C"}
+transform -> errors: failures {style.stroke: "#3498DB"}
+enrich -> errors: failures {style.stroke: "#2ECC71"}
+errors -> dlq: unrecoverable {style.stroke: "#F39C12"}

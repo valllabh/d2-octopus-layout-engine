@@ -9,7 +9,7 @@ scheduler: Scheduler {class: row-1-col-1}
 worker: Worker {class: row-1-col-3}
 queue: Queue {class: row-2-col-2}
 
-scheduler -> queue: enqueue
-queue -> worker: dequeue
-worker -> queue: retry
-scheduler -> scheduler: heartbeat
+scheduler -> queue: enqueue {style.stroke: "#E74C3C"}
+queue -> worker: dequeue {style.stroke: "#3498DB"}
+worker -> queue: retry {style.stroke: "#2ECC71"}
+scheduler -> scheduler: heartbeat {style.stroke: "#F39C12"}

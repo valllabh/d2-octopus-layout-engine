@@ -51,16 +51,17 @@ model: Model {
 }
 
 # Flow
-user -> interface: ask
-interface -> user: respond
-interface -> agency
-agency -> model
+user -> interface: ask {style.stroke: "#E74C3C"}
+interface -> user: respond {style.stroke: "#3498DB"}
+interface -> agency: {style.stroke: "#2ECC71"}
+agency -> model: {style.stroke: "#F39C12"}
 
 # Governance connects
-governance -> knowledge
+governance -> knowledge: {style.stroke: "#9B59B6"}
 governance -> agency: {style.stroke-dash: 3}
 
 # Agency to Knowledge
 agency -> knowledge: {
   source-arrowhead.shape: none
+  style.stroke: "#1ABC9C"
 }

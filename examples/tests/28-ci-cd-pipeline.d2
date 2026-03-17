@@ -21,13 +21,13 @@ sec: Security Scan {class: row-2-col-3}
 monitor: Monitoring {class: row-2-col-5}
 rollback: Rollback {class: row-3-col-5}
 
-commit -> build
-build -> lint
-build -> test
-lint -> test
-test -> sec
-sec -> stage
-stage -> prod
-prod -> monitor
-monitor -> rollback: on failure
-rollback -> stage
+commit -> build: {style.stroke: "#E74C3C"}
+build -> lint: {style.stroke: "#3498DB"}
+build -> test: {style.stroke: "#2ECC71"}
+lint -> test: {style.stroke: "#F39C12"}
+test -> sec: {style.stroke: "#9B59B6"}
+sec -> stage: {style.stroke: "#1ABC9C"}
+stage -> prod: {style.stroke: "#E67E22"}
+prod -> monitor: {style.stroke: "#2980B9"}
+monitor -> rollback: on failure {style.stroke: "#27AE60"}
+rollback -> stage: {style.stroke: "#C0392B"}

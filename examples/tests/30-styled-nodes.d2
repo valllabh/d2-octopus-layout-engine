@@ -48,11 +48,11 @@ report: Reports {
   style.fill: "#DDA0DD"
 }
 
-user -> auth: login
-user -> api: requests
-api -> cache: read
-api -> db1
-api -> db2
-api -> db3
-db3 -> report: generate
-auth -> db1: verify
+user -> auth: login {style.stroke: "#E74C3C"}
+user -> api: requests {style.stroke: "#3498DB"}
+api -> cache: read {style.stroke: "#2ECC71"}
+api -> db1: {style.stroke: "#F39C12"}
+api -> db2: {style.stroke: "#9B59B6"}
+api -> db3: {style.stroke: "#1ABC9C"}
+db3 -> report: generate {style.stroke: "#E67E22"}
+auth -> db1: verify {style.stroke: "#2980B9"}

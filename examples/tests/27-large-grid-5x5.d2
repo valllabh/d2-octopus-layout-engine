@@ -39,13 +39,13 @@ s4: S4 {class: row-5-col-4}
 s5: S5 {class: row-5-col-5}
 
 # Ring connections
-n1 -> n2 -> n3 -> n4 -> n5
-n5 -> e1 -> e2 -> e3 -> s5
-s5 -> s4 -> s3 -> s2 -> s1
-s1 -> w3 -> w2 -> w1 -> n1
+n1 -> n2 -> n3 -> n4 -> n5: {style.stroke: "#E74C3C"}
+n5 -> e1 -> e2 -> e3 -> s5: {style.stroke: "#3498DB"}
+s5 -> s4 -> s3 -> s2 -> s1: {style.stroke: "#2ECC71"}
+s1 -> w3 -> w2 -> w1 -> n1: {style.stroke: "#F39C12"}
 
 # Spokes to center
-n3 -> center
-w2 -> center
-e2 -> center
-s3 -> center
+n3 -> center: {style.stroke: "#9B59B6"}
+w2 -> center: {style.stroke: "#1ABC9C"}
+e2 -> center: {style.stroke: "#E67E22"}
+s3 -> center: {style.stroke: "#2980B9"}
