@@ -58,6 +58,22 @@ func (o Options) PixelPosition(pos Position) (x float64, y float64) {
 	return x, y
 }
 
+// GapCenterY returns the Y coordinate at the center of the horizontal gap
+// between row r and row r+1. This is where horizontal edge segments should run.
+func (o Options) GapCenterY(row int) float64 {
+	// Bottom of row = padding + row * (cellHeight + gap) - gap
+	// But simpler: top of row+1 minus half the gap
+	topOfNextRow := float64(row*(o.CellHeight+o.Gap) + o.Padding)
+	return topOfNextRow - float64(o.Gap)/2
+}
+
+// GapCenterX returns the X coordinate at the center of the vertical gap
+// between col c and col c+1. This is where vertical edge segments should run.
+func (o Options) GapCenterX(col int) float64 {
+	leftOfNextCol := float64(col*(o.CellWidth+o.Gap) + o.Padding)
+	return leftOfNextCol - float64(o.Gap)/2
+}
+
 // Anchor controls which point of the shape is used as the reference point.
 // Each edge of the shape has 5 named anchor points evenly spaced.
 // Naming: {edge}-{position} where position is 1 through 5 from left to right (top/bottom)
