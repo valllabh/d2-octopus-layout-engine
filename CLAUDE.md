@@ -47,9 +47,38 @@ internal/grid/grid.go         -- grid coordinate parsing and pixel math
 
 The `_bmad/` directory contains the BMAD workflow framework for project planning. Planning artifacts (PRD, architecture) are in `_bmad-output/planning-artifacts/`. Do not modify files inside `_bmad/core/`.
 
+## Plugin Flags
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `octopus-cell-width` | 200 | Cell width in pixels |
+| `octopus-cell-height` | 120 | Cell height in pixels |
+| `octopus-gap` | 40 | Gap between cells |
+| `octopus-padding` | 60 | Padding around grid |
+| `octopus-align` | center | Cell alignment (center, top-left, etc.) |
+| `octopus-anchor` | center | Shape anchor (center, top-left, top-2, right-4, etc.) |
+
+## Per Node/Edge Classes
+
+- Grid position: `class: row-N-col-M`
+- Node alignment: `class: align-top-left`
+- Node anchor: `class: anchor-bottom-center`
+- Edge anchors: `class: src-anchor-bottom-2 dst-anchor-top-4`
+
+Each shape edge has 5 named anchor points (1 through 5) plus corners and edge centers.
+
+## Testing
+
+Validate diagrams: `/octopus-validate-edge examples/tests/png/30-styled-nodes.png`
+Quality rules: `docs/edge-routing-rules.md` (33 rules, 8 categories)
+Test diagrams: `examples/tests/*.d2` (32 diagrams)
+Validation reports: `examples/tests/reports/`
+
 ## Conventions
 
 - Use Makefile targets for all build, test, and run operations
 - Do not use hyphens or dashes in prose sentences
 - Keep project documents well organized
 - Grid coordinates are 1 indexed: `[1,1]` is top left
+- After modifying edge routing, run all 32 tests and validate with octopus-validate-edge
+- Keep `bin/d2plugin-octopus` and `/opt/homebrew/bin/d2plugin-octopus` in sync
