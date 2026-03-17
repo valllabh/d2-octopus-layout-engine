@@ -644,12 +644,39 @@ func routeEdgeWithAnchors(edge *d2graph.Edge, srcBox, dstBox *geo.Box, anchors g
 	srcVertical := isVerticalAnchor(anchors.SrcAnchor)
 	dstVertical := isVerticalAnchor(anchors.DstAnchor)
 
-	if math.Abs(srcPt.X-dstPt.X) < 1 {
-		// Vertically aligned: straight line with midpoint
+	// Check if boxes are in the same column or row (centers within half cell dimension).
+	// This determines if the route should try to be straight despite anchor offsets.
+	srcCX := srcBox.TopLeft.X + srcBox.Width/2
+	srcCY := srcBox.TopLeft.Y + srcBox.Height/2
+	dstCX := dstBox.TopLeft.X + dstBox.Width/2
+	dstCY := dstBox.TopLeft.Y + dstBox.Height/2
+	sameColumn := math.Abs(srcCX-dstCX) < 5
+	sameRow := math.Abs(srcCY-dstCY) < 5
+
+	if sameColumn && srcVertical && dstVertical {
+		// Same column, both vertical anchors: force straight vertical using the average X
+		avgX := (srcPt.X + dstPt.X) / 2
+		midY := (srcPt.Y + dstPt.Y) / 2
+		edge.Route = []*geo.Point{
+			geo.NewPoint(avgX, srcPt.Y),
+			geo.NewPoint(avgX, midY),
+			geo.NewPoint(avgX, dstPt.Y),
+		}
+	} else if sameRow && !srcVertical && !dstVertical {
+		// Same row, both horizontal anchors: force straight horizontal using the average Y
+		avgY := (srcPt.Y + dstPt.Y) / 2
+		midX := (srcPt.X + dstPt.X) / 2
+		edge.Route = []*geo.Point{
+			geo.NewPoint(srcPt.X, avgY),
+			geo.NewPoint(midX, avgY),
+			geo.NewPoint(dstPt.X, avgY),
+		}
+	} else if math.Abs(srcPt.X-dstPt.X) < 1 {
+		// Vertically aligned anchors: straight line with midpoint
 		midY := (srcPt.Y + dstPt.Y) / 2
 		edge.Route = []*geo.Point{srcPt, geo.NewPoint(srcPt.X, midY), dstPt}
 	} else if math.Abs(srcPt.Y-dstPt.Y) < 1 {
-		// Horizontally aligned: straight line with midpoint
+		// Horizontally aligned anchors: straight line with midpoint
 		midX := (srcPt.X + dstPt.X) / 2
 		edge.Route = []*geo.Point{srcPt, geo.NewPoint(midX, srcPt.Y), dstPt}
 	} else if srcVertical && dstVertical {

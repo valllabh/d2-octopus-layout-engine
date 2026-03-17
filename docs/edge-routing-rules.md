@@ -67,6 +67,8 @@ Routes should use the minimum number of bends necessary to reach the destination
 **Pass**: Route uses the minimum bends for the geometry.
 **Fail**: Route has unnecessary extra bends that could be eliminated.
 
+**Important**: D2's SVG renderer adds rounded corners at bend points. These are cosmetic and should NOT be counted as extra bends. A route with 3 coordinate points has 1 bend even if D2 visually renders a rounded corner at that bend. Count the actual direction changes, not the visual curves.
+
 ### R6: Minimize Edge Crossings (MAJOR)
 
 The total number of edge crossings in the diagram should be minimized. When crossings are unavoidable, they should occur in open space away from nodes.
