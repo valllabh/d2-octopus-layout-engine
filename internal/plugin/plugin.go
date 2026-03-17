@@ -749,94 +749,100 @@ func routeEdgeWithAnchors(edge *d2graph.Edge, srcBox, dstBox *geo.Box, anchors g
 	edge.Route = enforcePerpendicularAnchors(edge.Route, anchors.SrcAnchor, anchors.DstAnchor)
 }
 
-// enforcePerpendicularAnchors ensures the first and last segments of a route
-// are perpendicular to the shape edge at the anchor point.
-// If the first segment is not perpendicular, a short stub is inserted.
+// enforcePerpendicularAnchors ensures edges leave/enter anchor points
+// perpendicular to the shape edge. Rebuilds the route to guarantee
+// the first segment from src and last segment into dst are orthogonal.
 func enforcePerpendicularAnchors(route []*geo.Point, srcAnchor, dstAnchor grid.Anchor) []*geo.Point {
-	if len(route) < 2 {
+	if len(route) < 3 {
 		return route
 	}
 
-	stubLen := 20.0
+	srcPt := route[0]
+	dstPt := route[len(route)-1]
+	srcNeedVert := isVerticalAnchor(srcAnchor)
+	dstNeedVert := isVerticalAnchor(dstAnchor)
 
-	// Check source: first segment must be perpendicular to source edge
-	p0, p1 := route[0], route[1]
-	srcVert := isVerticalAnchor(srcAnchor)
-	firstIsVert := math.Abs(p0.X-p1.X) < 1
-	firstIsHoriz := math.Abs(p0.Y-p1.Y) < 1
+	// Check if first segment is already correct
+	p1 := route[1]
+	srcOK := (srcNeedVert && math.Abs(srcPt.X-p1.X) < 1) || (!srcNeedVert && math.Abs(srcPt.Y-p1.Y) < 1)
 
-	if srcVert && !firstIsVert && !firstIsHoriz {
-		// Anchor on top/bottom but first segment is diagonal. Insert vertical stub.
-		stubY := p0.Y - stubLen
-		if isBottomAnchor(srcAnchor) {
-			stubY = p0.Y + stubLen
-		}
-		stub := geo.NewPoint(p0.X, stubY)
-		route = append([]*geo.Point{p0, stub}, route[1:]...)
-	} else if !srcVert && !firstIsHoriz && !firstIsVert {
-		// Anchor on left/right but first segment is diagonal. Insert horizontal stub.
-		stubX := p0.X - stubLen
-		if isRightAnchor(srcAnchor) {
-			stubX = p0.X + stubLen
-		}
-		stub := geo.NewPoint(stubX, p0.Y)
-		route = append([]*geo.Point{p0, stub}, route[1:]...)
-	} else if srcVert && firstIsHoriz {
-		// Anchor on top/bottom but first segment goes horizontal. Insert vertical stub.
-		stubY := p0.Y - stubLen
-		if isBottomAnchor(srcAnchor) {
-			stubY = p0.Y + stubLen
-		}
-		stub := geo.NewPoint(p0.X, stubY)
-		route = append([]*geo.Point{p0, stub}, route[1:]...)
-	} else if !srcVert && firstIsVert {
-		// Anchor on left/right but first segment goes vertical. Insert horizontal stub.
-		stubX := p0.X - stubLen
-		if isRightAnchor(srcAnchor) {
-			stubX = p0.X + stubLen
-		}
-		stub := geo.NewPoint(stubX, p0.Y)
-		route = append([]*geo.Point{p0, stub}, route[1:]...)
-	}
-
-	// Check destination: last segment must be perpendicular to dest edge
-	pN := route[len(route)-1]
+	// Check if last segment is already correct
 	pN1 := route[len(route)-2]
-	dstVert := isVerticalAnchor(dstAnchor)
-	lastIsVert := math.Abs(pN.X-pN1.X) < 1
-	lastIsHoriz := math.Abs(pN.Y-pN1.Y) < 1
+	dstOK := (dstNeedVert && math.Abs(dstPt.X-pN1.X) < 1) || (!dstNeedVert && math.Abs(dstPt.Y-pN1.Y) < 1)
 
-	if dstVert && !lastIsVert && !lastIsHoriz {
-		stubY := pN.Y + stubLen
-		if isBottomAnchor(dstAnchor) {
-			stubY = pN.Y - stubLen
-		}
-		stub := geo.NewPoint(pN.X, stubY)
-		route = append(route[:len(route)-1], stub, pN)
-	} else if !dstVert && !lastIsHoriz && !lastIsVert {
-		stubX := pN.X + stubLen
-		if isRightAnchor(dstAnchor) {
-			stubX = pN.X - stubLen
-		}
-		stub := geo.NewPoint(stubX, pN.Y)
-		route = append(route[:len(route)-1], stub, pN)
-	} else if dstVert && lastIsHoriz {
-		stubY := pN.Y + stubLen
-		if isBottomAnchor(dstAnchor) {
-			stubY = pN.Y - stubLen
-		}
-		stub := geo.NewPoint(pN.X, stubY)
-		route = append(route[:len(route)-1], stub, pN)
-	} else if !dstVert && lastIsVert {
-		stubX := pN.X + stubLen
-		if isRightAnchor(dstAnchor) {
-			stubX = pN.X - stubLen
-		}
-		stub := geo.NewPoint(stubX, pN.Y)
-		route = append(route[:len(route)-1], stub, pN)
+	if srcOK && dstOK {
+		return route
 	}
 
-	return route
+	// Rebuild route with perpendicular stubs at anchor points.
+	// The stub extends from the anchor, then an L connector aligns
+	// to the next interior point orthogonally.
+	stubLen := 20.0
+	var result []*geo.Point
+
+	// Find the first interior point to connect to
+	firstInterior := route[1]
+	if len(route) > 2 {
+		firstInterior = route[1]
+	}
+	// Find the last interior point to connect from
+	lastInterior := route[len(route)-2]
+
+	// Source: perpendicular stub + L connector to first interior
+	result = append(result, srcPt)
+	if !srcOK {
+		if srcNeedVert {
+			stubDir := stubLen
+			if !isBottomAnchor(srcAnchor) {
+				stubDir = -stubLen
+			}
+			stubPt := geo.NewPoint(srcPt.X, srcPt.Y+stubDir)
+			// L connector: from stub go horizontal to align with first interior X
+			connector := geo.NewPoint(firstInterior.X, stubPt.Y)
+			result = append(result, stubPt, connector)
+		} else {
+			stubDir := stubLen
+			if !isRightAnchor(srcAnchor) {
+				stubDir = -stubLen
+			}
+			stubPt := geo.NewPoint(srcPt.X+stubDir, srcPt.Y)
+			connector := geo.NewPoint(stubPt.X, firstInterior.Y)
+			result = append(result, stubPt, connector)
+		}
+		// Skip the first interior since we connected to it via the L
+		for i := 2; i < len(route)-1; i++ {
+			result = append(result, route[i])
+		}
+	} else {
+		for i := 1; i < len(route)-1; i++ {
+			result = append(result, route[i])
+		}
+	}
+
+	// Destination: L connector from last interior + perpendicular stub
+	if !dstOK {
+		if dstNeedVert {
+			stubDir := -stubLen
+			if isBottomAnchor(dstAnchor) {
+				stubDir = stubLen
+			}
+			stubPt := geo.NewPoint(dstPt.X, dstPt.Y+stubDir)
+			// L connector: from last interior go horizontal to align with dst X
+			connector := geo.NewPoint(dstPt.X, lastInterior.Y)
+			result = append(result, connector, stubPt)
+		} else {
+			stubDir := -stubLen
+			if isRightAnchor(dstAnchor) {
+				stubDir = stubLen
+			}
+			stubPt := geo.NewPoint(dstPt.X+stubDir, dstPt.Y)
+			connector := geo.NewPoint(lastInterior.X, dstPt.Y)
+			result = append(result, connector, stubPt)
+		}
+	}
+	result = append(result, dstPt)
+
+	return result
 }
 
 func isBottomAnchor(a grid.Anchor) bool {
