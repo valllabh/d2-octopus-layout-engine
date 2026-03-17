@@ -734,11 +734,18 @@ func routeEdgeWithAnchors(edge *d2graph.Edge, srcBox, dstBox *geo.Box, anchors g
 	}
 	edge.IsCurve = false
 
+	// Save original anchor endpoints before obstacle rerouting
+	origSrc := edge.Route[0]
+	origDst := edge.Route[len(edge.Route)-1]
+
 	// Post process: if route crosses any obstacle, reroute with a clean U shape
 	edge.Route = rerouteAroundObstacles(edge.Route, srcBox, dstBox, allObjects)
 
+	// Restore original anchor endpoints (reroute may have shifted them)
+	edge.Route[0] = origSrc
+	edge.Route[len(edge.Route)-1] = origDst
+
 	// Enforce perpendicular contact at both anchors.
-	// After rerouting, the first/last segments may no longer be perpendicular.
 	edge.Route = enforcePerpendicularAnchors(edge.Route, anchors.SrcAnchor, anchors.DstAnchor)
 }
 
