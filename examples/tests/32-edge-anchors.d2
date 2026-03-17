@@ -5,12 +5,12 @@ classes: {
   row-2-col-2: {style.opacity: 1}
   row-3-col-1: {style.opacity: 1}
   row-3-col-3: {style.opacity: 1}
-  src-anchor-bottom-2: {style.opacity: 1}
-  dst-anchor-top-2: {style.opacity: 1}
-  src-anchor-bottom-4: {style.opacity: 1}
-  dst-anchor-top-4: {style.opacity: 1}
-  src-anchor-right-2: {style.opacity: 1}
-  dst-anchor-left-2: {style.opacity: 1}
+  src-anchor-bottom-1: {style.opacity: 1}
+  dst-anchor-top-1: {style.opacity: 1}
+  src-anchor-bottom-5: {style.opacity: 1}
+  dst-anchor-top-5: {style.opacity: 1}
+  src-anchor-right-1: {style.opacity: 1}
+  dst-anchor-left-1: {style.opacity: 1}
   src-anchor-bottom-center: {style.opacity: 1}
   dst-anchor-top-center: {style.opacity: 1}
 }
@@ -40,22 +40,22 @@ cache: Cache {
 
 # Use specific anchor points to spread connections
 api -> processor: route A {
-  class: src-anchor-bottom-2 dst-anchor-top-2
+  class: src-anchor-bottom-1 dst-anchor-top-1
   style.stroke: "#E74C3C"
 }
 gateway -> processor: route B {
-  class: src-anchor-bottom-4 dst-anchor-top-4
+  class: src-anchor-bottom-5 dst-anchor-top-5
   style.stroke: "#3498DB"
 }
 processor -> db: write {
-  class: src-anchor-bottom-2 dst-anchor-top-center
+  class: src-anchor-bottom-1 dst-anchor-top-center
   style.stroke: "#2ECC71"
 }
 processor -> cache: read {
-  class: src-anchor-bottom-4 dst-anchor-top-center
+  class: src-anchor-bottom-5 dst-anchor-top-center
   style.stroke: "#F39C12"
 }
 api -> gateway: sync {
-  class: src-anchor-right-2 dst-anchor-left-2
+  class: src-anchor-right-1 dst-anchor-left-1
   style.stroke: "#9B59B6"
 }
