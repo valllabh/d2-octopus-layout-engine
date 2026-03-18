@@ -1,4 +1,4 @@
-module github.com/valllabh/octopus-layout-engine
+module github.com/valllabh/d2-octopus-layout-engine
 
 go 1.26.1
 

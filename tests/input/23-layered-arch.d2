@@ -1,0 +1,92 @@
+# Test 23: Layered architecture (4 rows)
+classes: {
+  row-1-col-1: {style.opacity: 1}
+  row-1-col-2: {style.opacity: 1}
+  row-1-col-3: {style.opacity: 1}
+  row-2-col-1: {style.opacity: 1}
+  row-2-col-2: {style.opacity: 1}
+  row-2-col-3: {style.opacity: 1}
+  row-3-col-1: {style.opacity: 1}
+  row-3-col-2: {style.opacity: 1}
+  row-3-col-3: {style.opacity: 1}
+  row-4-col-1: {style.opacity: 1}
+  row-4-col-2: {style.opacity: 1}
+  src-anchor-bottom-2: {style.opacity: 1}
+  src-anchor-bottom-3: {style.opacity: 1}
+  src-anchor-bottom-4: {style.opacity: 1}
+  dst-anchor-top-2: {style.opacity: 1}
+  dst-anchor-top-3: {style.opacity: 1}
+  dst-anchor-top-4: {style.opacity: 1}
+  src-anchor-right-3: {style.opacity: 1}
+  dst-anchor-left-3: {style.opacity: 1}
+}
+
+# Presentation Layer
+web: Web UI {class: row-1-col-1}
+mobile: Mobile {class: row-1-col-2}
+cli: CLI {class: row-1-col-3}
+
+# Service Layer
+auth-svc: Auth {class: row-2-col-1}
+biz-svc: Business Logic {class: row-2-col-2}
+notif-svc: Notifications {class: row-2-col-3}
+
+# Data Access Layer
+repo: Repository {class: row-3-col-1}
+cache-layer: Cache Layer {class: row-3-col-2}
+search: Search Index {class: row-3-col-3}
+
+# Storage Layer
+postgres: PostgreSQL {
+  shape: cylinder
+  class: row-4-col-1
+}
+redis: Redis {
+  shape: cylinder
+  class: row-4-col-2
+}
+
+web -> auth-svc: {
+  class: src-anchor-bottom-2
+  class: dst-anchor-top-3
+}
+web -> biz-svc: {
+  class: src-anchor-bottom-4
+  class: dst-anchor-top-2
+}
+mobile -> auth-svc: {
+  class: src-anchor-bottom-2
+  class: dst-anchor-top-4
+}
+mobile -> biz-svc: {
+  class: src-anchor-bottom-3
+  class: dst-anchor-top-3
+}
+cli -> biz-svc: {
+  class: src-anchor-bottom-3
+  class: dst-anchor-top-4
+}
+biz-svc -> repo: {
+  class: src-anchor-bottom-2
+  class: dst-anchor-top-3
+}
+biz-svc -> cache-layer: {
+  class: src-anchor-bottom-3
+  class: dst-anchor-top-3
+}
+biz-svc -> notif-svc: {
+  class: src-anchor-right-3
+  class: dst-anchor-left-3
+}
+repo -> postgres: {
+  class: src-anchor-bottom-3
+  class: dst-anchor-top-3
+}
+cache-layer -> redis: {
+  class: src-anchor-bottom-3
+  class: dst-anchor-top-3
+}
+search -> postgres: {
+  class: src-anchor-bottom-2
+  class: dst-anchor-top-4
+}

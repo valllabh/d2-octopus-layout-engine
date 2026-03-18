@@ -10,7 +10,7 @@ import (
 	"oss.terrastruct.com/d2/d2plugin"
 	"oss.terrastruct.com/d2/lib/geo"
 
-	"github.com/valllabh/octopus-layout-engine/internal/grid"
+	"github.com/valllabh/d2-octopus-layout-engine/internal/grid"
 )
 
 // OctopusPlugin implements the d2plugin.Plugin interface for grid based layout.
@@ -230,7 +230,7 @@ func (p *OctopusPlugin) Layout(_ context.Context, g *d2graph.Graph) error {
 	}
 
 	// Sixth pass: route edges with auto distributed anchors and obstacle avoidance.
-	routeEdges(g.Edges, g.Objects)
+	routeEdges(g.Edges, g.Objects, p.opts)
 
 	return nil
 }
@@ -391,7 +391,7 @@ type edgeEndpoint struct {
 // routeEdges routes all edges with automatic anchor distribution.
 // Edges connecting to the same side of the same node are automatically spread
 // across different anchor points. Manual anchor overrides take priority.
-func routeEdges(edges []*d2graph.Edge, allObjects []*d2graph.Object) {
+func routeEdges(edges []*d2graph.Edge, allObjects []*d2graph.Object, opts grid.Options) {
 	// Phase 1: Categorize all edge endpoints by (nodeID, side) to count how many
 	// edges share each side of each node.
 	type edgeInfo struct {
@@ -459,6 +459,9 @@ func routeEdges(edges []*d2graph.Edge, allObjects []*d2graph.Object) {
 		distributions[ep] = distributeAnchors(count)
 	}
 
+	// Build the A* routing grid once before routing all edges
+	rg := buildRoutingGrid(obstacles, opts)
+
 	// Phase 3: Route each edge using distributed anchors.
 	for _, info := range infos {
 		if info.isSelfLoop {
@@ -499,12 +502,15 @@ func routeEdges(edges []*d2graph.Edge, allObjects []*d2graph.Object) {
 			dstAnchor = sideAnchors(info.dstSide)[slotIdx]
 		}
 
-		routeEdgeWithAnchors(edge, srcBox, dstBox, grid.EdgeAnchors{
+		astarRouteEdge(edge, srcBox, dstBox, grid.EdgeAnchors{
 			SrcAnchor: srcAnchor,
 			DstAnchor: dstAnchor,
-		}, allObjects)
+		}, rg)
 		setEdgeLabel(edge)
 	}
+
+	// Phase 4: Spread overlapping parallel segments so they are visually distinct.
+	spreadOverlappingSegments(edges, opts)
 }
 
 type side int
@@ -573,8 +579,27 @@ func chooseSides(srcBox, dstBox *geo.Box, obstacles []*geo.Box) (srcSide, dstSid
 		dstPt := sideCenter(dstBox, c.dst)
 		score := c.score
 
-		obstacleCount := countObstaclesOnLPath(srcPt, dstPt, srcBox, dstBox, obstacles)
-		score += obstacleCount * 100
+		// Count obstacles on L path (try both bend orientations, pick better)
+		bends := []*geo.Point{
+			geo.NewPoint(dstPt.X, srcPt.Y),
+			geo.NewPoint(srcPt.X, dstPt.Y),
+		}
+		bestObs := math.MaxInt32
+		for _, mid := range bends {
+			count := 0
+			for _, obs := range obstacles {
+				if obs == srcBox || obs == dstBox {
+					continue
+				}
+				if segmentIntersectsBox(srcPt, mid, obs) || segmentIntersectsBox(mid, dstPt, obs) {
+					count++
+				}
+			}
+			if count < bestObs {
+				bestObs = count
+			}
+		}
+		score += bestObs * 100
 
 		if score < bestScore {
 			bestScore = score
@@ -601,249 +626,6 @@ func sideCenter(box *geo.Box, s side) *geo.Point {
 	return geo.NewPoint(cx, cy)
 }
 
-// countObstaclesOnLPath counts how many obstacles an L shaped path would cross.
-// For mixed axis sides (src horizontal, dst vertical or vice versa), there is only
-// one natural L bend point. For same axis sides, checks the bend near destination.
-func countObstaclesOnLPath(srcPt, dstPt *geo.Point, srcBox, dstBox *geo.Box, obstacles []*geo.Box) int {
-	// Try both L orientations and return the better one
-	paths := []*geo.Point{
-		geo.NewPoint(dstPt.X, srcPt.Y), // bend option 1: horizontal first
-		geo.NewPoint(srcPt.X, dstPt.Y), // bend option 2: vertical first
-	}
-
-	bestCount := math.MaxInt32
-	for _, mid := range paths {
-		count := 0
-		for _, obs := range obstacles {
-			if obs == srcBox || obs == dstBox {
-				continue
-			}
-			if segmentIntersectsBox(srcPt, mid, obs) || segmentIntersectsBox(mid, dstPt, obs) {
-				count++
-			}
-		}
-		if count < bestCount {
-			bestCount = count
-		}
-	}
-	return bestCount
-}
-
-
-// routeEdgeWithAnchors creates a route using anchor points on source and destination.
-// Uses gap based bending to avoid routing through intermediate boxes.
-func routeEdgeWithAnchors(edge *d2graph.Edge, srcBox, dstBox *geo.Box, anchors grid.EdgeAnchors, allObjects []*d2graph.Object) {
-	// Resolve source point
-	sx, sy := grid.AnchorPoint(anchors.SrcAnchor, srcBox.TopLeft.X, srcBox.TopLeft.Y, srcBox.Width, srcBox.Height)
-	srcPt := geo.NewPoint(sx, sy)
-
-	// Resolve destination point
-	dx, dy := grid.AnchorPoint(anchors.DstAnchor, dstBox.TopLeft.X, dstBox.TopLeft.Y, dstBox.Width, dstBox.Height)
-	dstPt := geo.NewPoint(dx, dy)
-
-	srcVertical := isVerticalAnchor(anchors.SrcAnchor)
-	dstVertical := isVerticalAnchor(anchors.DstAnchor)
-
-	// Check if boxes are in the same column or row (centers within half cell dimension).
-	// This determines if the route should try to be straight despite anchor offsets.
-	srcCX := srcBox.TopLeft.X + srcBox.Width/2
-	srcCY := srcBox.TopLeft.Y + srcBox.Height/2
-	dstCX := dstBox.TopLeft.X + dstBox.Width/2
-	dstCY := dstBox.TopLeft.Y + dstBox.Height/2
-	sameColumn := math.Abs(srcCX-dstCX) < 5
-	sameRow := math.Abs(srcCY-dstCY) < 5
-
-	if sameColumn && srcVertical && dstVertical {
-		// Same column, both vertical anchors: force straight vertical using the average X
-		avgX := (srcPt.X + dstPt.X) / 2
-		midY := (srcPt.Y + dstPt.Y) / 2
-		edge.Route = []*geo.Point{
-			geo.NewPoint(avgX, srcPt.Y),
-			geo.NewPoint(avgX, midY),
-			geo.NewPoint(avgX, dstPt.Y),
-		}
-	} else if sameRow && !srcVertical && !dstVertical {
-		// Same row, both horizontal anchors: force straight horizontal using the average Y
-		avgY := (srcPt.Y + dstPt.Y) / 2
-		midX := (srcPt.X + dstPt.X) / 2
-		edge.Route = []*geo.Point{
-			geo.NewPoint(srcPt.X, avgY),
-			geo.NewPoint(midX, avgY),
-			geo.NewPoint(dstPt.X, avgY),
-		}
-	} else if math.Abs(srcPt.X-dstPt.X) < 1 {
-		// Vertically aligned anchors: straight line with midpoint
-		midY := (srcPt.Y + dstPt.Y) / 2
-		edge.Route = []*geo.Point{srcPt, geo.NewPoint(srcPt.X, midY), dstPt}
-	} else if math.Abs(srcPt.Y-dstPt.Y) < 1 {
-		// Horizontally aligned anchors: straight line with midpoint
-		midX := (srcPt.X + dstPt.X) / 2
-		edge.Route = []*geo.Point{srcPt, geo.NewPoint(midX, srcPt.Y), dstPt}
-	} else if srcVertical && dstVertical {
-		// Both exit/enter vertically (top/bottom): bend near the destination.
-		// Routing near the destination avoids crossing intermediate boxes
-		// because the horizontal segment is adjacent to the entry point.
-		var bendY float64
-		if srcPt.Y < dstPt.Y {
-			// Going down: bend just above destination
-			bendY = dstBox.TopLeft.Y - 20
-		} else {
-			// Going up: bend just below destination
-			bendY = dstBox.TopLeft.Y + dstBox.Height + 20
-		}
-		edge.Route = []*geo.Point{
-			srcPt,
-			geo.NewPoint(srcPt.X, bendY),
-			geo.NewPoint(dstPt.X, bendY),
-			dstPt,
-		}
-	} else if !srcVertical && !dstVertical {
-		// Both exit/enter horizontally (left/right): bend in gap between boxes.
-		var bendX float64
-		if srcPt.X < dstPt.X {
-			// Going right: bend in gap between src right and dst left
-			srcRight := srcBox.TopLeft.X + srcBox.Width
-			dstLeft := dstBox.TopLeft.X
-			bendX = (srcRight + dstLeft) / 2
-		} else {
-			// Going left: bend in gap between dst right and src left
-			dstRight := dstBox.TopLeft.X + dstBox.Width
-			srcLeft := srcBox.TopLeft.X
-			bendX = (dstRight + srcLeft) / 2
-		}
-		edge.Route = []*geo.Point{
-			srcPt,
-			geo.NewPoint(bendX, srcPt.Y),
-			geo.NewPoint(bendX, dstPt.Y),
-			dstPt,
-		}
-	} else if srcVertical {
-		// Source exits vertically, destination enters horizontally: L shape
-		edge.Route = []*geo.Point{
-			srcPt,
-			geo.NewPoint(srcPt.X, dstPt.Y),
-			dstPt,
-		}
-	} else {
-		// Source exits horizontally, destination enters vertically: L shape
-		edge.Route = []*geo.Point{
-			srcPt,
-			geo.NewPoint(dstPt.X, srcPt.Y),
-			dstPt,
-		}
-	}
-	edge.IsCurve = false
-
-	// Save original anchor endpoints before obstacle rerouting
-	origSrc := edge.Route[0]
-	origDst := edge.Route[len(edge.Route)-1]
-
-	// Post process: if route crosses any obstacle, reroute with a clean U shape
-	edge.Route = rerouteAroundObstacles(edge.Route, srcBox, dstBox, allObjects)
-
-	// Restore original anchor endpoints (reroute may have shifted them)
-	edge.Route[0] = origSrc
-	edge.Route[len(edge.Route)-1] = origDst
-
-	// Enforce perpendicular contact at both anchors.
-	edge.Route = enforcePerpendicularAnchors(edge.Route, anchors.SrcAnchor, anchors.DstAnchor)
-}
-
-// enforcePerpendicularAnchors ensures edges leave/enter anchor points
-// perpendicular to the shape edge. Rebuilds the route to guarantee
-// the first segment from src and last segment into dst are orthogonal.
-func enforcePerpendicularAnchors(route []*geo.Point, srcAnchor, dstAnchor grid.Anchor) []*geo.Point {
-	if len(route) < 3 {
-		return route
-	}
-
-	srcPt := route[0]
-	dstPt := route[len(route)-1]
-	srcNeedVert := isVerticalAnchor(srcAnchor)
-	dstNeedVert := isVerticalAnchor(dstAnchor)
-
-	// Check if first segment is already correct
-	p1 := route[1]
-	srcOK := (srcNeedVert && math.Abs(srcPt.X-p1.X) < 1) || (!srcNeedVert && math.Abs(srcPt.Y-p1.Y) < 1)
-
-	// Check if last segment is already correct
-	pN1 := route[len(route)-2]
-	dstOK := (dstNeedVert && math.Abs(dstPt.X-pN1.X) < 1) || (!dstNeedVert && math.Abs(dstPt.Y-pN1.Y) < 1)
-
-	if srcOK && dstOK {
-		return route
-	}
-
-	// Rebuild route with perpendicular stubs at anchor points.
-	// The stub extends from the anchor, then an L connector aligns
-	// to the next interior point orthogonally.
-	stubLen := 20.0
-	var result []*geo.Point
-
-	// Find the first interior point to connect to
-	firstInterior := route[1]
-	if len(route) > 2 {
-		firstInterior = route[1]
-	}
-	// Find the last interior point to connect from
-	lastInterior := route[len(route)-2]
-
-	// Source: perpendicular stub + L connector to first interior
-	result = append(result, srcPt)
-	if !srcOK {
-		if srcNeedVert {
-			stubDir := stubLen
-			if !isBottomAnchor(srcAnchor) {
-				stubDir = -stubLen
-			}
-			stubPt := geo.NewPoint(srcPt.X, srcPt.Y+stubDir)
-			// L connector: from stub go horizontal to align with first interior X
-			connector := geo.NewPoint(firstInterior.X, stubPt.Y)
-			result = append(result, stubPt, connector)
-		} else {
-			stubDir := stubLen
-			if !isRightAnchor(srcAnchor) {
-				stubDir = -stubLen
-			}
-			stubPt := geo.NewPoint(srcPt.X+stubDir, srcPt.Y)
-			connector := geo.NewPoint(stubPt.X, firstInterior.Y)
-			result = append(result, stubPt, connector)
-		}
-		// Skip the first interior since we connected to it via the L
-		for i := 2; i < len(route)-1; i++ {
-			result = append(result, route[i])
-		}
-	} else {
-		for i := 1; i < len(route)-1; i++ {
-			result = append(result, route[i])
-		}
-	}
-
-	// Destination: L connector from last interior + perpendicular stub
-	if !dstOK {
-		if dstNeedVert {
-			stubDir := -stubLen
-			if isBottomAnchor(dstAnchor) {
-				stubDir = stubLen
-			}
-			stubPt := geo.NewPoint(dstPt.X, dstPt.Y+stubDir)
-			// L connector: from last interior go horizontal to align with dst X
-			connector := geo.NewPoint(dstPt.X, lastInterior.Y)
-			result = append(result, connector, stubPt)
-		} else {
-			stubDir := -stubLen
-			if isRightAnchor(dstAnchor) {
-				stubDir = stubLen
-			}
-			stubPt := geo.NewPoint(dstPt.X+stubDir, dstPt.Y)
-			connector := geo.NewPoint(lastInterior.X, dstPt.Y)
-			result = append(result, connector, stubPt)
-		}
-	}
-	result = append(result, dstPt)
-
-	return result
-}
 
 func isBottomAnchor(a grid.Anchor) bool {
 	switch a {
@@ -863,125 +645,6 @@ func isRightAnchor(a grid.Anchor) bool {
 	return false
 }
 
-// rerouteAroundObstacles checks if any route segment crosses an obstacle.
-// If so, it replaces the entire route with a clean U shape detour that goes
-// through the gap below or above all obstacles.
-func rerouteAroundObstacles(route []*geo.Point, srcBox, dstBox *geo.Box, allObjects []*d2graph.Object) []*geo.Point {
-	if len(route) < 2 {
-		return route
-	}
-
-	var obstacles []*geo.Box
-	for _, obj := range allObjects {
-		if obj.Box == nil || obj.IsContainer() {
-			continue
-		}
-		if obj.Box == srcBox || obj.Box == dstBox {
-			continue
-		}
-		obstacles = append(obstacles, obj.Box)
-	}
-
-	if len(obstacles) == 0 {
-		return route
-	}
-
-	// Check if any segment hits an obstacle
-	hasHit := false
-	for i := 1; i < len(route); i++ {
-		for _, obs := range obstacles {
-			if segmentIntersectsBox(route[i-1], route[i], obs) {
-				hasHit = true
-				break
-			}
-		}
-		if hasHit {
-			break
-		}
-	}
-
-	if !hasHit {
-		return route
-	}
-
-	// Route is blocked. Find only the obstacles that the route actually crosses.
-	srcPt := route[0]
-	dstPt := route[len(route)-1]
-
-	var hitObstacles []*geo.Box
-	for _, obs := range obstacles {
-		for i := 1; i < len(route); i++ {
-			if segmentIntersectsBox(route[i-1], route[i], obs) {
-				hitObstacles = append(hitObstacles, obs)
-				break
-			}
-		}
-	}
-
-	if len(hitObstacles) == 0 {
-		return route
-	}
-
-	// Find bounding box of ONLY the hit obstacles
-	minY, maxY := math.MaxFloat64, -math.MaxFloat64
-	minX, maxX := math.MaxFloat64, -math.MaxFloat64
-	for _, obs := range hitObstacles {
-		if obs.TopLeft.Y < minY {
-			minY = obs.TopLeft.Y
-		}
-		if obs.TopLeft.X < minX {
-			minX = obs.TopLeft.X
-		}
-		b := obs.TopLeft.Y + obs.Height
-		r := obs.TopLeft.X + obs.Width
-		if b > maxY {
-			maxY = b
-		}
-		if r > maxX {
-			maxX = r
-		}
-	}
-
-	// Determine if the route is primarily horizontal or vertical
-	isMainlyHorizontal := math.Abs(srcPt.X-dstPt.X) > math.Abs(srcPt.Y-dstPt.Y)
-
-	if isMainlyHorizontal {
-		// Detour above or below the hit obstacles
-		detourAbove := minY - 25
-		detourBelow := maxY + 25
-
-		// Pick whichever is closer to the route midpoint
-		midY := (srcPt.Y + dstPt.Y) / 2
-		detourY := detourBelow
-		if math.Abs(detourAbove-midY) < math.Abs(detourBelow-midY) {
-			detourY = detourAbove
-		}
-
-		return []*geo.Point{
-			srcPt,
-			geo.NewPoint(srcPt.X, detourY),
-			geo.NewPoint(dstPt.X, detourY),
-			dstPt,
-		}
-	}
-
-	// Mainly vertical: detour left or right of the hit obstacles
-	detourLeft := minX - 25
-	detourRight := maxX + 25
-
-	midX := (srcPt.X + dstPt.X) / 2
-	detourX := detourRight
-	if math.Abs(detourLeft-midX) < math.Abs(detourRight-midX) {
-		detourX = detourLeft
-	}
-
-	return []*geo.Point{
-		srcPt,
-		geo.NewPoint(detourX, srcPt.Y),
-		geo.NewPoint(detourX, dstPt.Y),
-		dstPt,
-	}
-}
 
 // segmentIntersectsBox checks if a horizontal or vertical line segment passes through a box.
 func segmentIntersectsBox(p1, p2 *geo.Point, box *geo.Box) bool {
