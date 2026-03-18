@@ -15,13 +15,13 @@ D2 ships with several built in layout engines. Each takes a different approach t
 
 ### Comparison
 
-The same microservices diagram rendered with each engine:
+The same 4 layer architecture diagram rendered with each engine:
 
 | dagre | elk | Octopus |
 |-------|-----|---------|
-| ![dagre](docs/images/16-dagre.png) | ![elk](docs/images/16-elk.png) | ![octopus](docs/images/16-octopus.png) |
+| ![dagre](docs/images/23-dagre.png) | ![elk](docs/images/23-elk.png) | ![octopus](docs/images/23-octopus.png) |
 
-All three engines receive the same D2 file. dagre and elk decide placement automatically. Octopus places nodes exactly where the grid coordinates specify, producing a consistent, predictable layout every time.
+All three engines receive the same D2 file. dagre and elk decide placement automatically, breaking the intended layer structure: Notifications ends up on the data layer, components get scattered. Octopus preserves the exact 4 layer architecture (Presentation, Service, Data Access, Storage) because you control where every node goes.
 
 ### When to use Octopus
 
