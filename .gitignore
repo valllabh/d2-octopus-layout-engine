@@ -8,3 +8,6 @@ bin/
 .DS_Store
 tests/output/
 tests/png/
+.claude/
+_bmad/
+_bmad-output/
