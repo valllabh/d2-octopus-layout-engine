@@ -1,0 +1,103 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 400" font-family="system-ui, -apple-system, sans-serif">
+  <defs>
+    <style>
+      .shape { fill: #f0f4ff; stroke: #1a3a6b; stroke-width: 2.5; rx: 6; }
+      .dot { fill: #e74c3c; }
+      .dot-corner { fill: #f39c12; }
+      .label { font-size: 11px; fill: #333; text-anchor: middle; }
+      .label-side { font-size: 13px; fill: #1a3a6b; font-weight: 600; text-anchor: middle; }
+      .title { font-size: 16px; fill: #1a3a6b; font-weight: 700; text-anchor: middle; }
+      .shape-label { font-size: 18px; fill: #1a3a6b; font-weight: 600; text-anchor: middle; dominant-baseline: central; }
+    </style>
+  </defs>
+
+  <!-- Title -->
+  <text x="260" y="28" class="title">Edge Anchor Points</text>
+
+  <!-- Shape box -->
+  <rect x="110" y="80" width="300" height="200" class="shape"/>
+  <text x="260" y="180" class="shape-label">Shape</text>
+
+  <!-- Top edge: 5 points (1/6 to 5/6 of width) -->
+  <circle cx="160" cy="80" r="5" class="dot"/>
+  <text x="160" y="66" class="label">top-1</text>
+
+  <circle cx="210" cy="80" r="5" class="dot"/>
+  <text x="210" y="66" class="label">top-2</text>
+
+  <circle cx="260" cy="80" r="5" class="dot"/>
+  <text x="260" y="66" class="label">top-3</text>
+
+  <circle cx="310" cy="80" r="5" class="dot"/>
+  <text x="310" y="66" class="label">top-4</text>
+
+  <circle cx="360" cy="80" r="5" class="dot"/>
+  <text x="360" y="66" class="label">top-5</text>
+
+  <!-- Bottom edge: 5 points -->
+  <circle cx="160" cy="280" r="5" class="dot"/>
+  <text x="160" y="302" class="label">bottom-1</text>
+
+  <circle cx="210" cy="280" r="5" class="dot"/>
+  <text x="210" y="302" class="label">bottom-2</text>
+
+  <circle cx="260" cy="280" r="5" class="dot"/>
+  <text x="260" y="302" class="label">bottom-3</text>
+
+  <circle cx="310" cy="280" r="5" class="dot"/>
+  <text x="310" y="302" class="label">bottom-4</text>
+
+  <circle cx="360" cy="280" r="5" class="dot"/>
+  <text x="360" y="302" class="label">bottom-5</text>
+
+  <!-- Left edge: 5 points (1/6 to 5/6 of height) -->
+  <circle cx="110" cy="113" r="5" class="dot"/>
+  <text x="90" y="117" class="label" text-anchor="end">left-1</text>
+
+  <circle cx="110" cy="147" r="5" class="dot"/>
+  <text x="90" y="151" class="label" text-anchor="end">left-2</text>
+
+  <circle cx="110" cy="180" r="5" class="dot"/>
+  <text x="90" y="184" class="label" text-anchor="end">left-3</text>
+
+  <circle cx="110" cy="213" r="5" class="dot"/>
+  <text x="90" y="217" class="label" text-anchor="end">left-4</text>
+
+  <circle cx="110" cy="247" r="5" class="dot"/>
+  <text x="90" y="251" class="label" text-anchor="end">left-5</text>
+
+  <!-- Right edge: 5 points -->
+  <circle cx="410" cy="113" r="5" class="dot"/>
+  <text x="430" y="117" class="label" text-anchor="start">right-1</text>
+
+  <circle cx="410" cy="147" r="5" class="dot"/>
+  <text x="430" y="151" class="label" text-anchor="start">right-2</text>
+
+  <circle cx="410" cy="180" r="5" class="dot"/>
+  <text x="430" y="184" class="label" text-anchor="start">right-3</text>
+
+  <circle cx="410" cy="213" r="5" class="dot"/>
+  <text x="430" y="217" class="label" text-anchor="start">right-4</text>
+
+  <circle cx="410" cy="247" r="5" class="dot"/>
+  <text x="430" y="251" class="label" text-anchor="start">right-5</text>
+
+  <!-- Corner points -->
+  <circle cx="110" cy="80" r="4" class="dot-corner"/>
+  <circle cx="410" cy="80" r="4" class="dot-corner"/>
+  <circle cx="110" cy="280" r="4" class="dot-corner"/>
+  <circle cx="410" cy="280" r="4" class="dot-corner"/>
+
+  <!-- Legend -->
+  <circle cx="140" cy="340" r="5" class="dot"/>
+  <text x="155" y="344" font-size="12" fill="#333" text-anchor="start">Edge anchor (5 per side)</text>
+
+  <circle cx="140" cy="365" r="4" class="dot-corner"/>
+  <text x="155" y="369" font-size="12" fill="#333" text-anchor="start">Corner anchor (top-left, top-right, bottom-left, bottom-right)</text>
+
+  <!-- Side labels -->
+  <text x="260" y="50" class="label-side">top</text>
+  <text x="260" y="328" class="label-side">bottom</text>
+  <text x="55" y="184" class="label-side">left</text>
+  <text x="465" y="184" class="label-side">right</text>
+</svg>

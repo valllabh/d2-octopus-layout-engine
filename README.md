@@ -128,7 +128,11 @@ Nodes without grid classes are auto placed in the next available cell.
 
 ## Edge Anchor Control
 
-Control exactly where edges connect to shapes using anchor classes. Each shape edge has 5 anchor points (1 through 5) plus corners and edge centers.
+Control exactly where edges connect to shapes. Each shape has 5 anchor points per side, plus corners:
+
+![Anchor points reference](docs/images/anchor-points.svg)
+
+Use `src-anchor-*` and `dst-anchor-*` classes to specify connection points:
 
 ```d2
 classes: {
@@ -145,8 +149,6 @@ a -> b: {
 ![Edge anchors example](docs/images/32-edge-anchors.png)
 
 **Important**: use separate `class:` lines for multiple classes on edges. D2 does not split space separated class values.
-
-Available anchors: `top-1` through `top-5`, `bottom-1` through `bottom-5`, `left-1` through `left-5`, `right-1` through `right-5`, plus `top-center`, `bottom-center`, `left-center`, `right-center`, `top-left`, `top-right`, `bottom-left`, `bottom-right`, `center`.
 
 ## More Examples
 
