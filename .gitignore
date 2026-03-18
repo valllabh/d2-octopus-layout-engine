@@ -8,7 +8,8 @@ bin/
 .DS_Store
 tests/output/
 tests/png/
-.claude/
+.claude/projects/
+.claude/settings.*
 _bmad/
 _bmad-output/
 CLAUDE.md
