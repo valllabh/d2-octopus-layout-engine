@@ -233,11 +233,18 @@ func (p *OctopusPlugin) Layout(_ context.Context, g *d2graph.Graph) error {
 	}
 
 	// Fourth pass: expand containers to fit their children.
-	for _, obj := range g.Objects {
-		if !obj.IsContainer() {
-			continue
-		}
+	// Process deepest containers first so parent containers can measure their
+	// already laid out children.
+	containers := sortContainersByDepth(g.Objects)
+	for _, obj := range containers {
 		p.layoutContainer(obj)
+	}
+
+	// Ensure every object has a Box (D2 exporter crashes on nil Box).
+	for _, obj := range g.Objects {
+		if obj.Box == nil {
+			obj.Box = geo.NewBox(geo.NewPoint(0, 0), float64(p.opts.CellWidth), float64(p.opts.CellHeight))
+		}
 	}
 
 	// Fifth pass: detect shape collisions (overlapping boxes).
@@ -344,6 +351,39 @@ func (p *OctopusPlugin) layoutContainer(container *d2graph.Object) {
 
 	lp := "OUTSIDE_TOP_CENTER"
 	container.LabelPosition = &lp
+}
+
+// sortContainersByDepth returns containers sorted deepest first so that
+// inner containers get laid out before their parents.
+func sortContainersByDepth(objects []*d2graph.Object) []*d2graph.Object {
+	type containerWithDepth struct {
+		obj   *d2graph.Object
+		depth int
+	}
+	var items []containerWithDepth
+	for _, obj := range objects {
+		if !obj.IsContainer() {
+			continue
+		}
+		depth := 0
+		for p := obj.Parent; p != nil; p = p.Parent {
+			depth++
+		}
+		items = append(items, containerWithDepth{obj, depth})
+	}
+	// Sort by depth descending (deepest first)
+	for i := 0; i < len(items); i++ {
+		for j := i + 1; j < len(items); j++ {
+			if items[j].depth > items[i].depth {
+				items[i], items[j] = items[j], items[i]
+			}
+		}
+	}
+	result := make([]*d2graph.Object, len(items))
+	for i, item := range items {
+		result[i] = item.obj
+	}
+	return result
 }
 
 // detectCollisions checks if any two positioned nodes physically overlap.

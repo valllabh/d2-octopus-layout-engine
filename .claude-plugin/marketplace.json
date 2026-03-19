@@ -9,7 +9,7 @@
       "name": "d2-octopus",
       "source": "./",
       "description": "Create D2 diagrams using the Octopus grid layout engine with explicit node positioning and A* edge routing",
-      "version": "1.2.0",
+      "version": "1.2.1",
       "author": {
         "name": "Vallabh Joshi"
       },
