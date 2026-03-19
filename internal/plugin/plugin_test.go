@@ -197,3 +197,44 @@ func TestPostProcess(t *testing.T) {
 		t.Errorf("PostProcess() modified SVG, expected passthrough")
 	}
 }
+
+func TestLayoutContainerWithNilChildBoxes(t *testing.T) {
+	// Regression: layoutContainer panicked when children had nil Box or nil TopLeft
+	p := New()
+	g := &d2graph.Graph{Root: &d2graph.Object{ID: "root"}}
+
+	parent := &d2graph.Object{ID: "parent", Graph: g}
+	child1 := &d2graph.Object{ID: "child1", Graph: g, Box: nil} // nil Box
+	child2 := &d2graph.Object{ID: "child2", Graph: g, Box: geo.NewBox(geo.NewPoint(100, 100), 80, 40)}
+	child2.Attributes.Classes = []string{"row-1-col-1"}
+
+	parent.ChildrenArray = append(parent.ChildrenArray, child1, child2)
+	g.Objects = append(g.Objects, parent, child1, child2)
+
+	err := p.Layout(context.Background(), g)
+	if err != nil {
+		t.Fatalf("Layout() with nil child boxes should not crash: %v", err)
+	}
+	if parent.Box == nil {
+		t.Error("parent container should have a Box after layout")
+	}
+}
+
+func TestLayoutContainerAllNilChildren(t *testing.T) {
+	// Container where ALL children have nil boxes should get default size
+	p := New()
+	g := &d2graph.Graph{Root: &d2graph.Object{ID: "root"}}
+
+	parent := &d2graph.Object{ID: "parent", Graph: g}
+	child := &d2graph.Object{ID: "child", Graph: g, Box: nil}
+	parent.ChildrenArray = append(parent.ChildrenArray, child)
+	g.Objects = append(g.Objects, parent, child)
+
+	err := p.Layout(context.Background(), g)
+	if err != nil {
+		t.Fatalf("Layout() error: %v", err)
+	}
+	if parent.Box == nil {
+		t.Error("container with all nil children should get a default Box")
+	}
+}

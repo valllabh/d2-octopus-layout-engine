@@ -303,7 +303,7 @@ func (p *OctopusPlugin) layoutContainer(container *d2graph.Object) {
 	maxX, maxY := float64(0), float64(0)
 
 	for _, child := range container.ChildrenArray {
-		if child.Box == nil {
+		if child.Box == nil || child.Box.TopLeft == nil {
 			continue
 		}
 		cx := child.Box.TopLeft.X
@@ -323,6 +323,16 @@ func (p *OctopusPlugin) layoutContainer(container *d2graph.Object) {
 		if cy+ch > maxY {
 			maxY = cy + ch
 		}
+	}
+
+	// If no children had valid boxes, give container a default size
+	if minX == math.MaxFloat64 {
+		if container.Box == nil {
+			container.Box = geo.NewBox(geo.NewPoint(0, 0), float64(p.opts.CellWidth), float64(p.opts.CellHeight))
+		}
+		lp := "OUTSIDE_TOP_CENTER"
+		container.LabelPosition = &lp
+		return
 	}
 
 	containerPad := float64(p.opts.Padding) / 2
