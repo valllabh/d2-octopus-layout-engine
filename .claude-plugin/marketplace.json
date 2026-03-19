@@ -1,0 +1,13 @@
+{
+  "name": "d2-octopus",
+  "version": "1.1.0",
+  "description": "Create D2 diagrams using the Octopus grid layout engine with explicit node positioning and A* edge routing",
+  "author": "valllabh",
+  "repository": "https://github.com/valllabh/d2-octopus-layout-engine",
+  "skills": [
+    {
+      "name": "d2-octopus",
+      "path": ".claude/skills/d2-octopus/SKILL.md"
+    }
+  ]
+}
