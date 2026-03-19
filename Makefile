@@ -15,11 +15,12 @@ test-single:
 	go test -run $(RUN) $(PKG)
 
 test-upstream: install
+	@mkdir -p tests/output/d2-upstream
 	@passed=0; failed=0; total=0; \
 	for f in tests/input/d2-upstream/*.d2; do \
 		total=$$((total+1)); \
-		base=$$(basename "$$f"); \
-		if d2 --layout=octopus "$$f" /tmp/octopus-test-out.svg 2>/dev/null; then \
+		base=$$(basename "$${f%.d2}"); \
+		if d2 --layout=octopus "$$f" "tests/output/d2-upstream/$${base}.svg" 2>/dev/null; then \
 			passed=$$((passed+1)); \
 		else \
 			failed=$$((failed+1)); \
