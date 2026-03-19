@@ -1,0 +1,21 @@
+# Test 33: Containers and nested structures
+classes: {
+  row-1-col-1: {style.opacity: 1}
+  row-1-col-2: {style.opacity: 1}
+  row-2-col-1: {style.opacity: 1}
+  row-2-col-2: {style.opacity: 1}
+}
+
+frontend: Frontend {
+  web: Web UI {class: row-1-col-1}
+  mobile: Mobile {class: row-1-col-2}
+}
+
+backend: Backend {
+  api: API {class: row-2-col-1}
+  worker: Worker {class: row-2-col-2}
+}
+
+frontend.web -> backend.api
+frontend.mobile -> backend.api
+backend.api -> backend.worker

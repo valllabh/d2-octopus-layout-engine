@@ -459,3 +459,41 @@ func TestValidate31Harness(t *testing.T) {
 			{"agency", "knowledge"},
 		})
 }
+
+func TestValidate33Containers(t *testing.T) {
+	p := New()
+	g := &d2graph.Graph{Root: &d2graph.Object{ID: "root"}}
+
+	frontend := &d2graph.Object{ID: "frontend", Graph: g}
+	backend := &d2graph.Object{ID: "backend", Graph: g}
+
+	web := &d2graph.Object{ID: "web", Graph: g, Box: geo.NewBox(geo.NewPoint(0, 0), 100, 50)}
+	web.Attributes.Classes = []string{"row-1-col-1"}
+	mobile := &d2graph.Object{ID: "mobile", Graph: g, Box: geo.NewBox(geo.NewPoint(0, 0), 100, 50)}
+	mobile.Attributes.Classes = []string{"row-1-col-2"}
+	api := &d2graph.Object{ID: "api", Graph: g, Box: geo.NewBox(geo.NewPoint(0, 0), 100, 50)}
+	api.Attributes.Classes = []string{"row-2-col-1"}
+	worker := &d2graph.Object{ID: "worker", Graph: g, Box: geo.NewBox(geo.NewPoint(0, 0), 100, 50)}
+	worker.Attributes.Classes = []string{"row-2-col-2"}
+
+	frontend.ChildrenArray = []*d2graph.Object{web, mobile}
+	backend.ChildrenArray = []*d2graph.Object{api, worker}
+
+	g.Objects = append(g.Objects, frontend, backend, web, mobile, api, worker)
+	g.Edges = append(g.Edges,
+		&d2graph.Edge{Src: web, Dst: api},
+		&d2graph.Edge{Src: mobile, Dst: api},
+		&d2graph.Edge{Src: api, Dst: worker},
+	)
+
+	err := p.Layout(context.Background(), g)
+	if err != nil {
+		t.Fatalf("Layout with containers should not error: %v", err)
+	}
+	if frontend.Box == nil {
+		t.Error("frontend container should have a Box")
+	}
+	if backend.Box == nil {
+		t.Error("backend container should have a Box")
+	}
+}
