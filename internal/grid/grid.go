@@ -7,6 +7,7 @@ import (
 )
 
 var gridClassPattern = regexp.MustCompile(`^row-(\d+)-col-(\d+)$`)
+var configPattern = regexp.MustCompile(`^octopus-(\d+)x(\d+)$`)
 
 // Position represents a grid coordinate.
 type Position struct {
@@ -128,6 +129,32 @@ const (
 type NodeStyle struct {
 	Align  Alignment // where in the cell to target
 	Anchor Anchor    // which point of the shape to place there
+}
+
+// ParseConfigClasses scans all objects' classes for octopus grid config.
+// Format: octopus-{width}x{height} (e.g., octopus-300x150)
+// Gap is derived automatically as 20% of cell width.
+// Padding defaults to 60px.
+func ParseConfigClasses(allClasses [][]string) Options {
+	opts := DefaultOptions()
+	for _, classes := range allClasses {
+		for _, class := range classes {
+			if m := configPattern.FindStringSubmatch(class); m != nil {
+				if w, err := strconv.Atoi(m[1]); err == nil && w > 0 {
+					opts.CellWidth = w
+				}
+				if h, err := strconv.Atoi(m[2]); err == nil && h > 0 {
+					opts.CellHeight = h
+				}
+				// Derive gap from cell width (20%, minimum 20px)
+				opts.Gap = opts.CellWidth / 5
+				if opts.Gap < 20 {
+					opts.Gap = 20
+				}
+			}
+		}
+	}
+	return opts
 }
 
 // ParseClasses extracts a grid Position from a list of D2 classes.

@@ -122,6 +122,22 @@ func (p *OctopusPlugin) HydrateOpts(opts []byte) error {
 }
 
 func (p *OctopusPlugin) Layout(_ context.Context, g *d2graph.Graph) error {
+	// Parse config from node labels. D2 only passes one class per node,
+	// so config is read from a node whose ID starts with "octopus-" and
+	// whose label contains "key: value" pairs, OR from class names on any node.
+	// Also check for config classes on any node.
+	var allClasses [][]string
+	for _, obj := range g.Objects {
+		if len(obj.Attributes.Classes) > 0 {
+			allClasses = append(allClasses, obj.Attributes.Classes)
+		}
+	}
+	configOpts := grid.ParseConfigClasses(allClasses)
+	p.opts.CellWidth = configOpts.CellWidth
+	p.opts.CellHeight = configOpts.CellHeight
+	p.opts.Gap = configOpts.Gap
+	p.opts.Padding = configOpts.Padding
+
 	positions := make(map[string]grid.Position)
 	nodeStyles := make(map[string]grid.NodeStyle)
 	occupied := make(map[grid.Position]bool)

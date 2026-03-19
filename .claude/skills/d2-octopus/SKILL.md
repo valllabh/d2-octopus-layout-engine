@@ -33,12 +33,11 @@ Unlike D2's built in engines (dagre, elk, tala), Octopus gives the user full con
 Every Octopus D2 file follows this pattern:
 
 ```d2
-# 1. Declare all grid position classes used in this diagram
+# 1. Declare all classes used in this diagram
 classes: {
   row-1-col-1: {style.opacity: 1}
   row-1-col-2: {style.opacity: 1}
   row-2-col-1: {style.opacity: 1}
-  # ... declare every row-N-col-M combination used
 }
 
 # 2. Define nodes with grid positions
@@ -53,13 +52,38 @@ node-a -> node-c
 
 ### Critical Rules
 
-1. **Every grid class must be declared** in the `classes` block with `{style.opacity: 1}`. This is a D2 requirement. Without the declaration, D2 ignores the class.
+1. **Every class must be declared** in the `classes` block with `{style.opacity: 1}` (or `0` for config). D2 ignores undeclared classes.
 
 2. **Grid coordinates are 1 indexed**. `row-1-col-1` is the top left cell.
 
 3. **No two nodes can share the same grid position**. Each cell holds one node.
 
-4. **Nodes without grid classes** are auto placed in the next available cell.
+4. **D2 only passes one class per node** to the plugin. Use separate nodes for separate classes.
+
+5. **Nodes without grid classes** are auto placed in the next available cell.
+
+## Grid Size Configuration
+
+Control cell dimensions with the `octopus-{width}x{height}` class. Assign it to a hidden config node. Gap between cells is derived automatically (20% of width).
+
+```d2
+classes: {
+  octopus-300x150: {style.opacity: 0}
+  row-1-col-1: {style.opacity: 1}
+  row-1-col-2: {style.opacity: 1}
+}
+
+# Hidden config node (invisible, not positioned)
+octopus-config: " " {
+  class: octopus-300x150
+  style.opacity: 0
+}
+
+a: API {class: row-1-col-1}
+b: DB {class: row-1-col-2}
+```
+
+Default cell size is 200x120. Only add the config node when you need different spacing.
 
 ## Edge Anchor Control
 
@@ -68,7 +92,6 @@ By default, Octopus automatically selects which side of a shape an edge exits/en
 For precise control, use `src-anchor-*` and `dst-anchor-*` classes:
 
 ```d2
-# Declare anchor classes
 classes: {
   src-anchor-bottom-2: {style.opacity: 1}
   dst-anchor-top-4: {style.opacity: 1}
@@ -83,10 +106,10 @@ a -> b: {
 **IMPORTANT**: Use separate `class:` lines for edge anchors. D2 does NOT split space separated class values.
 
 ```d2
-# WRONG: D2 treats this as one class name
+# WRONG
 a -> b: { class: src-anchor-bottom-2 dst-anchor-top-4 }
 
-# CORRECT: separate class lines
+# CORRECT
 a -> b: {
   class: src-anchor-bottom-2
   class: dst-anchor-top-4
@@ -95,90 +118,45 @@ a -> b: {
 
 ### Anchor Point Reference
 
-Each side has 5 named positions distributed at 1/6, 2/6, 3/6, 4/6, 5/6 of the edge length:
+Each side has 5 positions at 1/6, 2/6, 3/6, 4/6, 5/6 of the edge length:
 
-**Top/Bottom edge** (left to right): `top-1`, `top-2`, `top-3`, `top-4`, `top-5`
-**Left/Right edge** (top to bottom): `left-1`, `left-2`, `left-3`, `left-4`, `left-5`
+**Top/Bottom** (left to right): `top-1`, `top-2`, `top-3`, `top-4`, `top-5`
+**Left/Right** (top to bottom): `left-1`, `left-2`, `left-3`, `left-4`, `left-5`
 **Corners**: `top-left`, `top-right`, `bottom-left`, `bottom-right`
-**Edge centers**: `top-center` (= top-3), `bottom-center`, `left-center`, `right-center`
-**Shape center**: `center`
+**Centers**: `top-center`, `bottom-center`, `left-center`, `right-center`
 
 ### When to Use Explicit Anchors
 
-Use explicit anchors when:
-- Multiple edges exit the same side and you want specific ordering
-- You want to prevent overlapping lines by spreading edges across different anchor points
-- The automatic distribution does not produce the desired visual result
-
-For edges going through the same gap channel between shapes, use different anchor positions (e.g., `bottom-2` and `bottom-4`) to visually separate the lines.
-
-## Node Alignment and Anchor
-
-Override how a node sits within its grid cell:
-
-```d2
-classes: {
-  align-top-left: {style.opacity: 1}
-  anchor-bottom-center: {style.opacity: 1}
-}
-
-node: {
-  class: row-1-col-1
-  class: align-top-left
-  class: anchor-bottom-center
-}
-```
-
-- **align**: where in the cell to place the anchor point (center, top-left, top-center, etc.)
-- **anchor**: which point of the shape sits at the alignment target
-
-## Plugin Flags
-
-Users can customize grid sizing:
-
-| Flag | Default | Description |
-|------|---------|-------------|
-| `octopus-cell-width` | 200 | Cell width in pixels |
-| `octopus-cell-height` | 120 | Cell height in pixels |
-| `octopus-gap` | 40 | Gap between cells |
-| `octopus-padding` | 60 | Padding around the grid |
-
-```bash
-d2 --layout=octopus --octopus-gap=60 --octopus-cell-width=250 diagram.d2 output.svg
-```
+- Multiple edges exit the same side: pick different numbered positions (e.g., `bottom-2` and `bottom-4`)
+- Lines overlap visually: spread them with explicit positions
+- The automatic distribution does not look right
 
 ## Rendering
 
 Always render with `--layout=octopus`:
 
 ```bash
-# SVG output
 d2 --layout=octopus diagram.d2 output.svg
-
-# PNG output
 d2 --layout=octopus diagram.d2 output.png
 ```
 
 ## Design Guidelines
 
-When creating diagrams:
+1. **Plan the grid first**. Sketch rows and columns before writing D2 code.
 
-1. **Plan the grid first**. Sketch which row and column each node should occupy before writing D2 code.
+2. **Use rows for layers**. Row 1 = presentation, row 2 = services, row 3 = data, etc.
 
-2. **Use rows for layers**. Put related components on the same row (e.g., row 1 = presentation, row 2 = services, row 3 = data).
+3. **Use columns for grouping**. Components in the same vertical stack share a column.
 
-3. **Use columns for grouping**. Components in the same vertical stack should share a column.
+4. **Leave gaps for routing**. Skip row/column numbers between dense areas for cleaner edge paths.
 
-4. **Leave gaps for routing**. If you have many cross connections, leave empty cells between dense areas so edges have room to route cleanly.
-
-5. **Use distinct stroke colors** for edges when multiple connections exist. This makes the diagram easier to read.
-
+5. **Use distinct stroke colors** for multiple edges:
 ```d2
 a -> b: { style.stroke: "#E74C3C" }
 c -> d: { style.stroke: "#3498DB" }
 ```
 
-6. **Use explicit anchors** when two or more edges exit the same node toward the same direction. Pick different numbered positions (e.g., `bottom-2` and `bottom-4`) to keep lines separated.
+6. **Use explicit anchors** when edges going the same direction from a node need separation.
 
 ## Example: Layered Architecture
 
@@ -227,7 +205,6 @@ redis: Redis {
   class: row-4-col-2
 }
 
-# Edges with anchor control to prevent overlap
 web -> auth: {
   class: src-anchor-bottom-2
   class: dst-anchor-top-3
@@ -236,10 +213,7 @@ web -> biz: {
   class: src-anchor-bottom-4
   class: dst-anchor-top-2
 }
-mobile -> biz: {
-  class: src-anchor-bottom-2
-  class: dst-anchor-top-3
-}
+mobile -> biz
 cli -> biz: {
   class: src-anchor-bottom-4
   class: dst-anchor-top-4

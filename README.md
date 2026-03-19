@@ -114,14 +114,17 @@ d2 --layout=octopus diagram.d2 output.png
 
 ### Step 3: Customize (optional)
 
-Adjust grid sizing with plugin flags:
+Adjust grid sizing by adding a config class to a hidden node in your D2 file:
 
-```bash
-d2 --layout=octopus \
-  --octopus-cell-width=250 \
-  --octopus-cell-height=150 \
-  --octopus-gap=60 \
-  diagram.d2 output.svg
+```d2
+classes: {
+  octopus-300x150: {style.opacity: 0}
+}
+
+octopus-config: " " {
+  class: octopus-300x150
+  style.opacity: 0
+}
 ```
 
 Nodes without grid classes are auto placed in the next available cell.
@@ -158,16 +161,22 @@ a -> b: {
 
 See `tests/input/` for all 32 test diagrams.
 
-## Plugin Flags
+## Grid Size Configuration
 
-| Flag | Default | Description |
-|------|---------|-------------|
-| `octopus-cell-width` | 200 | Cell width in pixels |
-| `octopus-cell-height` | 120 | Cell height in pixels |
-| `octopus-gap` | 40 | Gap between cells |
-| `octopus-padding` | 60 | Padding around the grid |
-| `octopus-align` | center | Default cell alignment |
-| `octopus-anchor` | center | Default shape anchor |
+Control cell dimensions with the `octopus-{width}x{height}` class on a hidden config node. Gap between cells is derived automatically (20% of width).
+
+```d2
+classes: {
+  octopus-300x150: {style.opacity: 0}
+}
+
+octopus-config: " " {
+  class: octopus-300x150
+  style.opacity: 0
+}
+```
+
+Default cell size is **200x120**. Only add the config node when you need different spacing.
 
 ## How Edge Routing Works
 
